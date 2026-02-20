@@ -76,7 +76,6 @@ CREATE TABLE dientes_historial (
     FOREIGN KEY (id_historial) REFERENCES historial(id_historial)
         ON DELETE CASCADE
 );
-
 CREATE INDEX idx_diente_paciente ON dientes_historial(numero_diente);
 
 -- TABLA TRATAMIENTOS
