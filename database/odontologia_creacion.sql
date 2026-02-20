@@ -70,6 +70,9 @@ CREATE TABLE dientes_historial (
     numero_diente INT NOT NULL,
     estado ENUM('sano','caries','restaurado','extraido','fracturado','endodoncia') NOT NULL,
     descripcion TEXT,
+
+    UNIQUE KEY uq_historial_diente (id_historial, numero_diente),
+
     FOREIGN KEY (id_historial) REFERENCES historial(id_historial)
         ON DELETE CASCADE
 );
