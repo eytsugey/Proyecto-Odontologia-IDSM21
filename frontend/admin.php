@@ -1,3 +1,12 @@
+<?php
+session_start();
+
+if (!isset($_SESSION['admin'])) {
+    header("Location: login.php");
+    exit();
+}
+?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -32,11 +41,10 @@
         <p>Resumen financiero del sistema</p>
       </div>
       <div class="user">
-        Admin
+        <?php echo $_SESSION['admin']; ?>
       </div>
     </header>
 
-    <!-- RESUMEN DE INGRESOS -->
     <section class="panel">
       <h2>Resumen de Ingresos</h2>
 
