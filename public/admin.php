@@ -1,9 +1,15 @@
 <?php
 session_start();
+if (!isset($_SESSION["user"])) {
+  header("Location: login.php");
+  exit;
+}
 
-if (!isset($_SESSION['admin'])) {
-    header("Location: login.php");
-    exit();
+// opcional: solo admin
+$rol = strtolower($_SESSION["user"]["rol"] ?? "");
+if ($rol !== "administrador" && $rol !== "admin") {
+  http_response_code(403);
+  die("No autorizado");
 }
 ?>
 
@@ -21,6 +27,7 @@ if (!isset($_SESSION['admin'])) {
 
   <aside class="sidebar">
     <h2>🦷 DentalApp</h2>
+    
 
     <nav>
       <a class="active">Panel de control</a>
@@ -35,15 +42,18 @@ if (!isset($_SESSION['admin'])) {
 
   <main class="main">
 
-    <header class="topbar">
-      <div>
-        <h1>Administrador</h1>
-        <p>Resumen financiero del sistema</p>
-      </div>
-      <div class="user">
-        <?php echo $_SESSION['admin']; ?>
-      </div>
-    </header>
+<header class="topbar">
+  <div>
+    <h1>Panel de control</h1>
+    <p>Resumen financiero del sistema</p>
+  </div>
+
+  <div class="user">
+    <?php echo htmlspecialchars($_SESSION["user"]["nombre"]); ?>
+    |
+    <a href="logout.php" class="logout-btn">Cerrar sesión</a>
+  </div>
+</header>
 
     <section class="panel">
       <h2>Resumen de Ingresos</h2>
@@ -75,6 +85,7 @@ if (!isset($_SESSION['admin'])) {
         </div>
 
       </div>
+      
     </section>
 
   </main>
