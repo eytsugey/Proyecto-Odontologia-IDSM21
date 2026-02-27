@@ -1,72 +1,101 @@
 <?php
-require 'middleware.php';
-validarSesion('secretario');
+session_start();
 
-header('Content-Type: application/json');
+require_once __DIR__ . "/config/database.php"; // $pdo
+header("Content-Type: application/json; charset=UTF-8");
 
-$method = $_SERVER['REQUEST_METHOD'];
+$method = $_SERVER["REQUEST_METHOD"];
 
 try {
 
-    // ============================
-    // 1️⃣ OBTENER CITAS SOLICITADAS
-    // ============================
-    if ($method === 'GET') {
+  // ============================
+  // ✅ 0) SOLICITAR CITA (PÚBLICO)
+  // ============================
+  if ($method === "POST") {
 
-        $stmt = $pdo->prepare(
-            "SELECT c.id_cita, p.nombre, p.apellido, c.fecha, c.hora
-             FROM citas c
-             JOIN pacientes p ON c.id_paciente = p.id_paciente
-             WHERE c.estado = 'solicitada'"
-        );
+    // Form público (no JSON)
+    $nombre = trim($_POST["nombre"] ?? "");
+    $apellido = trim($_POST["apellido"] ?? "");
+    $telefono = trim($_POST["telefono"] ?? "");
+    $motivo = trim($_POST["motivo"] ?? "");
+    $fecha = trim($_POST["fecha_preferida"] ?? "");
+    $hora = trim($_POST["hora_preferida"] ?? "");
 
-        $stmt->execute();
-
-        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
-        exit;
+    if ($nombre === "" || $telefono === "" || $motivo === "") {
+      http_response_code(400);
+      echo json_encode(["error" => "Faltan campos obligatorios (nombre, telefono, motivo)."]);
+      exit;
     }
 
-    // ============================
-    // 2️⃣ CONFIRMAR CITA
-    // ============================
-    if ($method === 'PUT') {
+    // 1) Crear paciente (mínimo)
+    $stmtP = $pdo->prepare("INSERT INTO pacientes (nombre, apellido, telefono) VALUES (?, ?, ?)");
+    $stmtP->execute([$nombre, $apellido, $telefono]);
+    $id_paciente = (int)$pdo->lastInsertId();
 
-        $data = json_decode(file_get_contents("php://input"), true);
+    // 2) Crear cita como solicitada
+    $stmtC = $pdo->prepare("INSERT INTO citas (id_paciente, fecha, hora, motivo, estado) VALUES (?, ?, ?, ?, 'solicitada')");
+    $stmtC->execute([
+      $id_paciente,
+      ($fecha === "" ? null : $fecha),
+      ($hora === "" ? null : $hora),
+      $motivo
+    ]);
 
-        $stmt = $pdo->prepare(
-            "UPDATE citas SET estado = 'confirmada'
-             WHERE id_cita = ?"
-        );
+    echo json_encode(["success" => true, "message" => "Solicitud enviada. Un secretario la confirmará."]);
+    exit;
+  }
 
-        $stmt->execute([$data['id_cita']]);
+  // 🔐 De aquí en adelante: SOLO SECRETARIO
+  require_once __DIR__ . "/middleware/auth.php";
+  validarSesion("secretario");
 
-        echo json_encode(["success" => true]);
-        exit;
-    }
+  // ============================
+  // 1) OBTENER CITAS SOLICITADAS
+  // ============================
+  if ($method === "GET") {
 
-    // ============================
-    // 3️⃣ CANCELAR CITA
-    // ============================
-    if ($method === 'DELETE') {
+    $stmt = $pdo->prepare(
+      "SELECT c.id_cita, p.nombre, p.apellido, c.fecha, c.hora
+       FROM citas c
+       JOIN pacientes p ON c.id_paciente = p.id_paciente
+       WHERE c.estado = 'solicitada'"
+    );
 
-        $data = json_decode(file_get_contents("php://input"), true);
+    $stmt->execute();
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    exit;
+  }
 
-        $stmt = $pdo->prepare(
-            "UPDATE citas SET estado = 'cancelada'
-             WHERE id_cita = ?"
-        );
+  // ============================
+  // 2) CONFIRMAR CITA
+  // ============================
+  if ($method === "PUT") {
+    $data = json_decode(file_get_contents("php://input"), true);
 
-        $stmt->execute([$data['id_cita']]);
+    $stmt = $pdo->prepare("UPDATE citas SET estado = 'confirmada' WHERE id_cita = ?");
+    $stmt->execute([$data["id_cita"] ?? 0]);
 
-        echo json_encode(["success" => true]);
-        exit;
-    }
+    echo json_encode(["success" => true]);
+    exit;
+  }
 
-    // Método no permitido
-    http_response_code(405);
-    echo json_encode(["error" => "Método no permitido"]);
+  // ============================
+  // 3) CANCELAR CITA
+  // ============================
+  if ($method === "DELETE") {
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    $stmt = $pdo->prepare("UPDATE citas SET estado = 'cancelada' WHERE id_cita = ?");
+    $stmt->execute([$data["id_cita"] ?? 0]);
+
+    echo json_encode(["success" => true]);
+    exit;
+  }
+
+  http_response_code(405);
+  echo json_encode(["error" => "Método no permitido"]);
 
 } catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(["error" => "Error del servidor"]);
+  http_response_code(500);
+  echo json_encode(["error" => "Error del servidor", "detail" => $e->getMessage()]);
 }
