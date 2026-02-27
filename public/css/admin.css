@@ -1,0 +1,151 @@
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+  background:#f4f7fb;
+  color:#0f172a;
+}
+
+/* LAYOUT */
+.layout{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:260px 1fr;
+}
+
+/* SIDEBAR */
+.sidebar{
+  background:#1e3a8a;
+  color:white;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+.sidebar h2{
+  font-size:18px;
+  padding:10px;
+  background:rgba(255,255,255,.1);
+  border-radius:12px;
+}
+
+.sidebar nav{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.sidebar nav a{
+  display:block;
+  padding:10px 12px;
+  border-radius:8px;
+  background:rgba(255,255,255,.08);
+  font-size:14px;
+  color:#eaf1ff;
+}
+
+.sidebar nav a.active{
+  background:white;
+  color:#1e3a8a;
+  font-weight:bold;
+}
+
+/* MAIN */
+.main{
+  padding:30px;
+  display:flex;
+  flex-direction:column;
+  gap:25px;
+}
+
+/* TOPBAR */
+.topbar{
+  background:white;
+  border-radius:16px;
+  padding:20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  box-shadow:0 10px 25px rgba(0,0,0,.05);
+}
+
+.topbar h1{
+  font-size:22px;
+}
+
+.topbar p{
+  font-size:14px;
+  color:#64748b;
+  margin-top:5px;
+}
+
+.user{
+  padding:10px 15px;
+  background:#f1f5f9;
+  border-radius:12px;
+  font-weight:bold;
+}
+
+/* PANEL */
+.panel{
+  background:white;
+  border-radius:16px;
+  padding:25px;
+  box-shadow:0 10px 25px rgba(0,0,0,.05);
+}
+
+.panel h2{
+  margin-bottom:20px;
+  font-size:18px;
+}
+
+/* FINANCE GRID */
+.finance-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+  gap:20px;
+}
+
+.finance-card{
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:14px;
+  padding:20px;
+  text-align:center;
+  transition:.3s ease;
+}
+
+.finance-card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 8px 20px rgba(0,0,0,.08);
+}
+
+.finance-card h3{
+  font-size:14px;
+  margin-bottom:10px;
+  color:#475569;
+}
+
+.finance-card strong{
+  display:block;
+  font-size:26px;
+  color:#1e3a8a;
+  margin-bottom:5px;
+}
+
+.finance-card span{
+  font-size:12px;
+  color:#64748b;
+}
+
+/* RESPONSIVE */
+@media (max-width:900px){
+  .layout{
+    grid-template-columns:1fr;
+  }
+}
