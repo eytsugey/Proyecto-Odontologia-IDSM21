@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-$conn = new mysqli("127.0.0.1", "root", "", "odontologia_db", 3307);
+$conn = new mysqli("127.0.0.1", "root", "", "odontologia_db", 3306);
 
 if ($conn->connect_error) {
     die("Error de conexión");
