@@ -1,6 +1,6 @@
 <?php
 $host = "localhost";
-$db   = "clinica_dental";
+$db   = "odontologia_db";
 $user = "root";
 $pass = "";
 

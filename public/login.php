@@ -21,7 +21,7 @@ session_start();
         <p style="color:red; text-align:center;">Correo o contraseña incorrectos</p>
     <?php endif; ?>
 
-    <form action="validar_login.php" method="POST">
+    <form action="validarlogin.php" method="POST">
         <div class="form-group">
             <label>Correo</label>
             <input type="email" name="email" placeholder="doctor@clinica.com" required>
