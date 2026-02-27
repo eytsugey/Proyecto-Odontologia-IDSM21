@@ -149,3 +149,20 @@ body{
     grid-template-columns:1fr;
   }
 }
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.logout-btn {
+  color: #e74c3c;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.logout-btn:hover {
+  text-decoration: underline;
+}
