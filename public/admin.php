@@ -1,10 +1,19 @@
+<?php
+session_start();
+
+if (!isset($_SESSION['admin'])) {
+    header("Location: login.php");
+    exit();
+}
+?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel Administrador | Sistema Odontológico</title>
-<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
 
@@ -32,11 +41,10 @@
         <p>Resumen financiero del sistema</p>
       </div>
       <div class="user">
-        Admin
+        <?php echo $_SESSION['admin']; ?>
       </div>
     </header>
 
-    <!-- RESUMEN DE INGRESOS -->
     <section class="panel">
       <h2>Resumen de Ingresos</h2>
 
