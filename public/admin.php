@@ -14,6 +14,8 @@ if (!isset($_SESSION['admin'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel Administrador | Sistema Odontológico</title>
 <link rel="stylesheet" href="css/admin.css">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
 
