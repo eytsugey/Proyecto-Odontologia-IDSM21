@@ -1,5 +1,7 @@
 <?php
-require 'config.php';
+session_start();
+
+require __DIR__ . '/../config/database.php';
 
 header("Content-Type: application/json");
 
@@ -30,9 +32,9 @@ if (!$usuario || !password_verify($password, $usuario['password'])) {
 }
 
 $_SESSION['usuario'] = [
-    "id" => $usuario['id_usuario'],
-    "nombre" => $usuario['nombre'],
-    "rol" => $usuario['rol']
+    "id"     => $usuario['id_usuario'],
+    "nombre"=> $usuario['nombre'],
+    "rol"   => $usuario['rol']
 ];
 
 echo json_encode([
