@@ -1,0 +1,137 @@
+/* Form público usando el mismo estilo clínico de styles.css */
+
+.public-topbar{
+  background: var(--color-card);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  margin: 18px auto 0;
+  max-width: 980px;
+  box-shadow: var(--shadow);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.public-topbar h1{ font-size:22px; }
+.public-topbar p{
+  margin-top:4px;
+  font-size:13px;
+  color: var(--color-muted);
+}
+
+.public-link{
+  text-decoration:none;
+  background: var(--color-hover);
+  color: var(--color-texto);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-weight:700;
+}
+
+.public-main{
+  max-width: 980px;
+  margin: 14px auto 28px;
+  padding: 0 14px;
+}
+
+.form{ margin-top: 10px; }
+
+.help{
+  font-size: 12px;
+  color: var(--color-muted);
+  margin: -6px 0 12px;
+}
+
+.sep{
+  border: 0;
+  height: 1px;
+  background: var(--color-border);
+  margin: 16px 0;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+}
+
+.field label{
+  font-size: 12px;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.field input,
+.field select,
+.field textarea{
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus{
+  border-color: rgba(30,58,138,.45);
+  box-shadow: 0 0 0 3px rgba(30,58,138,.12);
+}
+
+.field-wide{ grid-column: 1 / -1; }
+
+.form-actions{
+  margin-top: 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.check{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.btn-primary{
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: var(--color-sidebar);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-primary:hover{
+  filter: brightness(1.08);
+}
+
+.note{
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+/* Móvil */
+@media (max-width: 768px){
+  .public-topbar{
+    flex-direction: column;
+    align-items:flex-start;
+  }
+  .form-grid{
+    grid-template-columns: 1fr;
+  }
+}
