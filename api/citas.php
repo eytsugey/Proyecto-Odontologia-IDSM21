@@ -1,101 +1,63 @@
 <?php
 session_start();
-
-require_once __DIR__ . "/config/database.php"; // $pdo
-header("Content-Type: application/json; charset=UTF-8");
-
-$method = $_SERVER["REQUEST_METHOD"];
-
-try {
-
-  // ============================
-  // ✅ 0) SOLICITAR CITA (PÚBLICO)
-  // ============================
-  if ($method === "POST") {
-
-    // Form público (no JSON)
-    $nombre = trim($_POST["nombre"] ?? "");
-    $apellido = trim($_POST["apellido"] ?? "");
-    $telefono = trim($_POST["telefono"] ?? "");
-    $motivo = trim($_POST["motivo"] ?? "");
-    $fecha = trim($_POST["fecha_preferida"] ?? "");
-    $hora = trim($_POST["hora_preferida"] ?? "");
-
-    if ($nombre === "" || $telefono === "" || $motivo === "") {
-      http_response_code(400);
-      echo json_encode(["error" => "Faltan campos obligatorios (nombre, telefono, motivo)."]);
-      exit;
-    }
-
-    // 1) Crear paciente (mínimo)
-    $stmtP = $pdo->prepare("INSERT INTO pacientes (nombre, apellido, telefono) VALUES (?, ?, ?)");
-    $stmtP->execute([$nombre, $apellido, $telefono]);
-    $id_paciente = (int)$pdo->lastInsertId();
-
-    // 2) Crear cita como solicitada
-    $stmtC = $pdo->prepare("INSERT INTO citas (id_paciente, fecha, hora, motivo, estado) VALUES (?, ?, ?, ?, 'solicitada')");
-    $stmtC->execute([
-      $id_paciente,
-      ($fecha === "" ? null : $fecha),
-      ($hora === "" ? null : $hora),
-      $motivo
+require_once __DIR__ . '/config/database.php';
+$action = $_GET['action'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'solicitar') {
+    $stmt = $pdo->prepare('INSERT INTO pacientes (nombre, sexo, edad, fecha_nacimiento, telefono) VALUES (?,?,?,?,?)');
+    $stmt->execute([
+        trim($_POST['nombre'] ?? ''),
+        $_POST['sexo'] ?? null,
+        (int)($_POST['edad'] ?? 0) ?: null,
+        $_POST['fecha_nacimiento'] ?: null,
+        trim($_POST['telefono'] ?? '')
     ]);
-
-    echo json_encode(["success" => true, "message" => "Solicitud enviada. Un secretario la confirmará."]);
+    $pacienteId = (int)$pdo->lastInsertId();
+    $stmt = $pdo->prepare('INSERT INTO citas (paciente_id, doctor_id, fecha, hora, motivo_consulta, estado) VALUES (?,?,?,?,?,?)');
+    $stmt->execute([
+        $pacienteId,
+        1,
+        $_POST['fecha_preferida'] ?: null,
+        $_POST['hora_preferida'] ?: null,
+        trim($_POST['motivo'] ?? ''),
+        'pendiente'
+    ]);
+    header('Location: /proyecto_odontologia_funcional/public/agendar-cita.php?ok=1');
     exit;
-  }
-
-  // 🔐 De aquí en adelante: SOLO SECRETARIO
-  require_once __DIR__ . "/middleware/auth.php";
-  validarSesion("secretario");
-
-  // ============================
-  // 1) OBTENER CITAS SOLICITADAS
-  // ============================
-  if ($method === "GET") {
-
-    $stmt = $pdo->prepare(
-      "SELECT c.id_cita, p.nombre, p.apellido, c.fecha, c.hora
-       FROM citas c
-       JOIN pacientes p ON c.id_paciente = p.id_paciente
-       WHERE c.estado = 'solicitada'"
-    );
-
-    $stmt->execute();
-    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
-    exit;
-  }
-
-  // ============================
-  // 2) CONFIRMAR CITA
-  // ============================
-  if ($method === "PUT") {
-    $data = json_decode(file_get_contents("php://input"), true);
-
-    $stmt = $pdo->prepare("UPDATE citas SET estado = 'confirmada' WHERE id_cita = ?");
-    $stmt->execute([$data["id_cita"] ?? 0]);
-
-    echo json_encode(["success" => true]);
-    exit;
-  }
-
-  // ============================
-  // 3) CANCELAR CITA
-  // ============================
-  if ($method === "DELETE") {
-    $data = json_decode(file_get_contents("php://input"), true);
-
-    $stmt = $pdo->prepare("UPDATE citas SET estado = 'cancelada' WHERE id_cita = ?");
-    $stmt->execute([$data["id_cita"] ?? 0]);
-
-    echo json_encode(["success" => true]);
-    exit;
-  }
-
-  http_response_code(405);
-  echo json_encode(["error" => "Método no permitido"]);
-
-} catch (PDOException $e) {
-  http_response_code(500);
-  echo json_encode(["error" => "Error del servidor", "detail" => $e->getMessage()]);
 }
+require_once __DIR__ . '/middleware/auth.php';
+requireLogin(['doctor', 'secretaria']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $doctorId = 1;
+    $fecha = $_POST['fecha'] ?: null;
+    $hora = $_POST['hora'] ?: null;
+    $check = $pdo->prepare('SELECT COUNT(*) FROM citas WHERE doctor_id = ? AND fecha = ? AND hora = ? AND estado <> "cancelada"');
+    $check->execute([$doctorId, $fecha, $hora]);
+    if ($check->fetchColumn() > 0) {
+        header('Location: /proyecto_odontologia_funcional/public/citas.php?choque=1');
+        exit;
+    }
+    $stmt = $pdo->prepare('INSERT INTO citas (paciente_id, doctor_id, fecha, hora, motivo_consulta, estado) VALUES (?,?,?,?,?,?)');
+    $stmt->execute([
+        (int)($_POST['paciente_id'] ?? 0),
+        $doctorId,
+        $fecha,
+        $hora,
+        trim($_POST['motivo_consulta'] ?? ''),
+        $_POST['estado'] ?? 'confirmada'
+    ]);
+    header('Location: /proyecto_odontologia_funcional/public/citas.php?ok=1');
+    exit;
+}
+if (isset($_GET['confirmar'])) {
+    $pdo->prepare('UPDATE citas SET estado = "confirmada" WHERE id = ?')->execute([(int)$_GET['confirmar']]);
+    header('Location: /proyecto_odontologia_funcional/public/citas.php');
+    exit;
+}
+if (isset($_GET['cancelar'])) {
+    $pdo->prepare('UPDATE citas SET estado = "cancelada" WHERE id = ?')->execute([(int)$_GET['cancelar']]);
+    header('Location: /proyecto_odontologia_funcional/public/citas.php');
+    exit;
+}
+http_response_code(405);
+echo 'Método no permitido';
+?>

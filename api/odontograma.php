@@ -1,73 +1,32 @@
 <?php
-require_once "config.php";
-require_once "middleware.php";
-
-header("Content-Type: application/json");
-
-verificarSesion();
-verificarRol(["empleado","administrador","secretario"]);
-
-$method = $_SERVER["REQUEST_METHOD"];
-
-if ($method === "GET") {
-    $id_paciente = isset($_GET["id_paciente"]) ? (int)$_GET["id_paciente"] : 0;
-    if ($id_paciente <= 0) {
-        http_response_code(400);
-        echo json_encode(["success"=>false,"message"=>"id_paciente requerido"]);
+session_start();
+require_once __DIR__ . '/config/database.php';
+header('Content-Type: application/json; charset=utf-8');
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $idPaciente = (int)($_GET['id_paciente'] ?? 0);
+    if (!$idPaciente) {
+        echo json_encode(['success' => false, 'message' => 'Paciente no válido']);
         exit;
     }
-
-    // usa la VISTA como pide tu SQL
-    $stmt = $pdo->prepare("
-        SELECT numero_diente, estado, descripcion
-        FROM vista_odontograma
-        WHERE id_paciente = ?
-    ");
-    $stmt->execute([$id_paciente]);
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    echo json_encode(["success"=>true,"data"=>$rows]);
+    $stmt = $pdo->prepare('SELECT numero_diente, estado, descripcion FROM odontograma WHERE paciente_id = ? ORDER BY numero_diente');
+    $stmt->execute([$idPaciente]);
+    echo json_encode(['success' => true, 'data' => $stmt->fetchAll()]);
     exit;
 }
-
-if ($method === "POST") {
-    $data = json_decode(file_get_contents("php://input"), true);
-
-    $id_historial = (int)($data["id_historial"] ?? 0);
-    $numero_diente = (int)($data["numero_diente"] ?? 0);
-    $estado = $data["estado"] ?? "";
-    $descripcion = trim($data["descripcion"] ?? "");
-
-    if ($id_historial <= 0 || $numero_diente < 1 || $numero_diente > 32 || $estado === "") {
-        http_response_code(400);
-        echo json_encode(["success"=>false,"message"=>"Datos inválidos"]);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $pacienteId = (int)($data['id_paciente'] ?? 1);
+    $numero = (int)($data['numero_diente'] ?? 0);
+    $estado = trim($data['estado'] ?? 'sano');
+    $descripcion = trim($data['descripcion'] ?? '');
+    if (!$pacienteId || !$numero) {
+        echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
         exit;
     }
-
-    // Nota: tu tabla NO tiene unique para (id_historial, numero_diente),
-    // así que hacemos UPSERT manual: si existe -> UPDATE, si no -> INSERT.
-    $check = $pdo->prepare("SELECT id_diente FROM dientes_historial WHERE id_historial=? AND numero_diente=? LIMIT 1");
-    $check->execute([$id_historial, $numero_diente]);
-    $existe = $check->fetch(PDO::FETCH_ASSOC);
-
-    if ($existe) {
-        $upd = $pdo->prepare("
-            UPDATE dientes_historial
-            SET estado = ?, descripcion = ?
-            WHERE id_diente = ?
-        ");
-        $upd->execute([$estado, $descripcion, $existe["id_diente"]]);
-    } else {
-        $ins = $pdo->prepare("
-            INSERT INTO dientes_historial (id_historial, numero_diente, estado, descripcion)
-            VALUES (?,?,?,?)
-        ");
-        $ins->execute([$id_historial, $numero_diente, $estado, $descripcion]);
-    }
-
-    echo json_encode(["success"=>true]);
+    $stmt = $pdo->prepare('INSERT INTO odontograma (paciente_id, numero_diente, estado, descripcion) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE estado=VALUES(estado), descripcion=VALUES(descripcion)');
+    $stmt->execute([$pacienteId, $numero, $estado, $descripcion]);
+    echo json_encode(['success' => true]);
     exit;
 }
-
-http_response_code(405);
-echo json_encode(["success"=>false,"message"=>"Método no permitido"]);
+echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+?>
