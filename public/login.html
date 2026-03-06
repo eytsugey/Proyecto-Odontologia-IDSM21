@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login | Sistema Odontológico</title>
+<link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+
+<div class="login-container">
+    
+    <div class="logo">🦷</div>
+    <h2>Sistema Odontológico</h2>
+
+    <form id="loginForm">
+
+        <div class="form-group">
+            <label>Correo</label>
+            <input type="email" id="email" required>
+        </div>
+
+        <div class="form-group">
+            <label>Contraseña</label>
+            <div class="password-box">
+                <input type="password" id="password" required>
+                <span onclick="togglePassword()" class="toggle">👁</span>
+            </div>
+        </div>
+
+        <button type="submit" class="btn" id="btnLogin">
+            Iniciar sesión
+        </button>
+
+        <p id="mensaje" class="mensaje"></p>
+
+        <div class="extra">
+            <a href="register.php">Crear cuenta</a>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+function togglePassword() {
+    const input = document.getElementById('password');
+    input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+
+    e.preventDefault();
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const mensaje = document.getElementById('mensaje');
+    const btn = document.getElementById('btnLogin');
+
+    mensaje.textContent = "";
+    btn.textContent = "Validando...";
+    btn.disabled = true;
+
+    try {
+
+        const res = await fetch('../api/login.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if(!data.success){
+
+            mensaje.textContent = "Correo o contraseña incorrectos";
+            mensaje.style.color = "red";
+
+            btn.textContent = "Iniciar sesión";
+            btn.disabled = false;
+            return;
+
+        }
+
+        mensaje.textContent = "Acceso correcto";
+        mensaje.style.color = "green";
+
+        setTimeout(()=>{
+
+            if(data.rol === "admin"){
+                window.location.href = "admin.php";
+            }
+
+            if(data.rol === "secretaria"){
+                window.location.href = "secretaria.php";
+            }
+
+            if(data.rol === "odontologo"){
+                window.location.href = "odontologo.php";
+            }
+
+        },800);
+
+    } catch(error){
+
+        mensaje.textContent = "Error de conexión con el servidor";
+        mensaje.style.color = "red";
+
+        btn.textContent = "Iniciar sesión";
+        btn.disabled = false;
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>
+
