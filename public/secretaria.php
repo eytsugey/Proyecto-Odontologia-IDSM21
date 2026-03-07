@@ -1,41 +1,191 @@
 <?php
-require __DIR__ . '/../middleware/auth.php';
+session_start();
+require_once __DIR__ . '/../api/config/database.php';
+require_once __DIR__ . '/../api/middleware/auth.php';
+requireLogin(['secretaria','doctor']);
 
-validarSesion('secretaria');
+$titulo='Panel Secretaria';
+$subtitulo='Registro de pacientes, citas e historia clínica';
+$active='secretaria';
+
+include '_layout_top.php';
+
+/* CITAS DE HOY */
+$hoy = $pdo->query('
+SELECT c.id, p.nombre, c.hora, c.estado
+FROM citas c
+JOIN pacientes p ON p.id = c.paciente_id
+WHERE c.fecha = CURDATE()
+ORDER BY c.hora
+')->fetchAll();
+
+/* TODAS LAS CITAS PARA EL CALENDARIO */
+$citas = $pdo->query('
+SELECT c.id, p.nombre, c.fecha, c.hora
+FROM citas c
+JOIN pacientes p ON p.id = c.paciente_id
+ORDER BY c.fecha, c.hora
+')->fetchAll();
+
+
+// FILTRAR CITAS UNICAS POR FECHA Y HORA
+$eventos_unicos = [];
+foreach ($citas as $c) {
+    $key = $c['fecha'].' '.$c['hora']; // clave única por fecha y hora
+    if (!isset($eventos_unicos[$key])) {
+        $eventos_unicos[$key] = [
+            'fecha' => $c['fecha'],
+            'hora' => $c['hora'],
+            'nombres' => [$c['nombre']]
+        ];
+    } else {
+        $eventos_unicos[$key]['nombres'][] = $c['nombre'];
+    }
+}
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Panel Secretaria</title>
-<link rel="stylesheet" href="secretaria.css">
-</head>
-<body>
+<section class="panel">
+  <h2>Citas de hoy</h2>
 
-<header class="header">
-  <h1>🦷 Panel de Secretaria</h1>
-  <a href="../auth/logout.php" class="logout">Cerrar sesión</a>
-</header>
-
-<main class="container">
-
-  <section class="filtro">
-    <input type="date" id="fechaFiltro">
-    <button onclick="cargarCitas()">Filtrar</button>
-  </section>
-
-  <table>
+  <table class="table">
     <thead>
       <tr>
-        <th>Paciente</th>
-        <th>Fecha</th>
         <th>Hora</th>
+        <th>Paciente</th>
         <th>Estado</th>
-        <th>Acciones</th>
       </tr>
     </thead>
-    <tbody id="tablaCitas"></tbody>
-  </table>
 
-</main>
+    <tbody>
+      <?php foreach ($hoy as $c): ?>
+      <tr>
+        <td><?php echo htmlspecialchars($c['hora']); ?></td>
+        <td><?php echo htmlspecialchars($c['nombre']); ?></td>
+        <td>
+          <span class="badge <?php echo htmlspecialchars($c['estado']); ?>">
+            <?php echo htmlspecialchars($c['estado']); ?>
+          </span>
+        </td>
+      </tr>
+      <?php endforeach; ?>
+    </tbody>
+
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Calendario de Citas</h2>
+
+  <div id="calendar"></div>
+</section>
+
+<!-- FULLCALENDAR -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var calendarEl = document.getElementById('calendar');
+
+  var calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    locale: 'es',
+
+    events: [
+      <?php foreach ($eventos_unicos as $e): ?>
+      {
+        title: "<?php echo addslashes(implode(', ', $e['nombres'])); ?> (<?php echo $e['hora']; ?>)",
+        start: "<?php echo $e['fecha']; ?>T<?php echo $e['hora']; ?>"
+      },
+      <?php endforeach; ?>
+    ]
+  });
+
+  calendar.render();
+});
+</script>
+
+<style>
+/* PANEL GENERAL */
+.panel{
+    background:#ffffff;
+    padding:20px;
+    border-radius:10px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.08);
+    margin-bottom:30px;
+}
+
+.panel h2{
+    margin-bottom:15px;
+    color:#2c3e50;
+}
+
+/* TABLA CITAS HOY */
+.table{
+    width:100%;
+    border-collapse:collapse;
+    font-family:Arial, sans-serif;
+}
+
+.table thead{
+    background:#3498db;
+    color:white;
+}
+
+.table th{
+    padding:12px;
+    text-align:left;
+}
+
+.table td{
+    padding:10px;
+    border-bottom:1px solid #eee;
+}
+
+.table tr:hover{
+    background:#f5f7fa;
+}
+
+.badge{
+    padding:5px 10px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+/* ESTADOS */
+.badge.pendiente{
+    background:#f39c12;
+    color:white;
+}
+
+.badge.confirmada{
+    background:#27ae60;
+    color:white;
+}
+
+.badge.cancelada{
+    background:#e74c3c;
+    color:white;
+}
+
+/* CALENDARIO */
+#calendar{
+    max-width:1000px;
+    margin:30px auto;
+}
+
+.fc-daygrid-event{
+    background:#3498db;
+    border:none;
+    padding:3px;
+    border-radius:5px;
+    font-size:12px;
+}
+
+.fc-daygrid-event:hover{
+    background:#2980b9;
+}
+</style>
+
+<?php include '_layout_bottom.php'; ?>

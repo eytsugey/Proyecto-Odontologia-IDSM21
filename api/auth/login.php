@@ -1,34 +1,17 @@
 <?php
 session_start();
-require '../config/database.php';
-
-$data = json_decode(file_get_contents("php://input"), true);
-
-$stmt = $pdo->prepare(
-    "SELECT id_usuario, nombre, password, rol
-     FROM usuarios
-     WHERE email=? AND activo=1"
-);
-$stmt->execute([$data['email']]);
-$usuario = $stmt->fetch();
-
-if ($usuario && password_verify($data['password'], $usuario['password'])) {
-
-    $_SESSION['usuario'] = [
-        'id' => $usuario['id_usuario'],
-        'nombre' => $usuario['nombre'],
-        'rol' => $usuario['rol']
-    ];
-
-    echo json_encode([
-        "success" => true,
-        "rol" => $usuario['rol']
-    ]);
-} else {
-    http_response_code(401);
-    echo json_encode(["success"=>false]);
+require_once __DIR__ . '/../config/database.php';
+$correo = trim($_POST['correo'] ?? '');
+$password = $_POST['password'] ?? '';
+$stmt = $pdo->prepare('SELECT * FROM usuarios WHERE correo = ? LIMIT 1');
+$stmt->execute([$correo]);
+$user = $stmt->fetch();
+if ($user && $password === $user['password'])  {
+    $_SESSION['usuario_id'] = (int)$user['id'];
+    $_SESSION['nombre'] = $user['nombre'];
+    $_SESSION['rol'] = $user['rol'];
+    header('Location: /proyecto_odontologia_funcional/public/' . ($user['rol'] === 'secretaria' ? 'secretaria.php' : 'admin.php'));
+    exit;
 }
-
-
-
-
+header('Location: /proyecto_odontologia_funcional/public/login.php?error=1');
+?>
