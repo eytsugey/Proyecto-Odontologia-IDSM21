@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'solicitar') {
         trim($_POST['motivo'] ?? ''),
         'pendiente'
     ]);
-    header('Location: /proyecto_odontologia_funcional/public/agendar-cita.php?ok=1');
+    header('Location: /Proyecto-Odontologia-IDSM21/public/agendar-cita.php?ok=1');
     exit;
 }
 require_once __DIR__ . '/middleware/auth.php';
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $check = $pdo->prepare('SELECT COUNT(*) FROM citas WHERE doctor_id = ? AND fecha = ? AND hora = ? AND estado <> "cancelada"');
     $check->execute([$doctorId, $fecha, $hora]);
     if ($check->fetchColumn() > 0) {
-        header('Location: /proyecto_odontologia_funcional/public/citas.php?choque=1');
+        header('Location: /Proyecto-Odontologia-IDSM21/public/citas.php?choque=1');
         exit;
     }
     $stmt = $pdo->prepare('INSERT INTO citas (paciente_id, doctor_id, fecha, hora, motivo_consulta, estado) VALUES (?,?,?,?,?,?)');
@@ -45,17 +45,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         trim($_POST['motivo_consulta'] ?? ''),
         $_POST['estado'] ?? 'confirmada'
     ]);
-    header('Location: /proyecto_odontologia_funcional/public/citas.php?ok=1');
+    header('Location: /Proyecto-Odontologia-IDSM21/public/citas.php?ok=1');
     exit;
 }
 if (isset($_GET['confirmar'])) {
     $pdo->prepare('UPDATE citas SET estado = "confirmada" WHERE id = ?')->execute([(int)$_GET['confirmar']]);
-    header('Location: /proyecto_odontologia_funcional/public/citas.php');
+    header('Location: /Proyecto-Odontologia-IDSM21/public/citas.php');
     exit;
 }
 if (isset($_GET['cancelar'])) {
     $pdo->prepare('UPDATE citas SET estado = "cancelada" WHERE id = ?')->execute([(int)$_GET['cancelar']]);
-    header('Location: /proyecto_odontologia_funcional/public/citas.php');
+    header('Location: /Proyecto-Odontologia-IDSM21/public/citas.php');
     exit;
 }
 http_response_code(405);

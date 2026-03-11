@@ -1,133 +1,90 @@
-let dienteSeleccionado = null;
-const pacienteActual = 1; // temporal
+(function () {
+  const arcadaSuperior = document.getElementById("arcadaSuperior");
+  const arcadaInferior = document.getElementById("arcadaInferior");
+  const numeroInput = document.getElementById("numeroDiente");
+  const estadoInput = document.getElementById("estadoDiente");
+  const descripcionInput = document.getElementById("descripcionDiente");
 
-document.addEventListener("DOMContentLoaded", () => {
-  generarOdontograma();
-  conectarEventosUI();
-  cargarOdontograma(); // si quieres cargar de BD
-});
+  if (!arcadaSuperior || !arcadaInferior) return;
 
-function conectarEventosUI(){
-  // Cuando cambias el estado, pinta inmediatamente el diente seleccionado (sin guardar)
-  const estadoSelect = document.getElementById("estadoDiente");
-  estadoSelect.addEventListener("change", () => {
-    if(!dienteSeleccionado) return;
-    const estado = estadoSelect.value;
-    // Mantén la descripción actual en UI
-    const desc = document.getElementById("descripcionDiente")?.value?.trim() || "";
-    pintarDiente(dienteSeleccionado, estado, desc, true); // true = solo UI
-  });
+  const dientesSuperiores = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
+  const dientesInferiores = [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+  let dienteSeleccionado = null;
 
-  // Si escribes descripción, la guardamos en el dataset del diente (solo UI) para que no se pierda
-  const descEl = document.getElementById("descripcionDiente");
-  if(descEl){
-    descEl.addEventListener("input", () => {
-      if(!dienteSeleccionado) return;
-      const el = getDienteEl(dienteSeleccionado);
-      if(!el) return;
-      el.dataset.descripcion = descEl.value;
+  function storageKey() {
+    return `odontograma_paciente_${window.pacienteActual || 1}`;
+  }
+
+  function obtenerDatos() {
+    try { return JSON.parse(localStorage.getItem(storageKey())) || {}; }
+    catch (e) { return {}; }
+  }
+
+  function guardarDatos(data) {
+    localStorage.setItem(storageKey(), JSON.stringify(data));
+  }
+
+  function clasePorEstado(estado) {
+    const permitidos = ["sano", "caries", "restaurado", "extraido", "fracturado", "endodoncia"];
+    return permitidos.includes(estado) ? estado : "sano";
+  }
+
+  function crearDiente(numero) {
+    const div = document.createElement("div");
+    div.className = "diente sano";
+    div.dataset.numero = numero;
+    div.innerHTML = `<span>${numero}</span>`;
+    div.addEventListener("click", () => seleccionarDiente(numero));
+    return div;
+  }
+
+  function renderArcadas() {
+    arcadaSuperior.innerHTML = "";
+    arcadaInferior.innerHTML = "";
+    dientesSuperiores.forEach(n => arcadaSuperior.appendChild(crearDiente(n)));
+    dientesInferiores.forEach(n => arcadaInferior.appendChild(crearDiente(n)));
+    aplicarDatos();
+  }
+
+  function aplicarDatos() {
+    const data = obtenerDatos();
+    document.querySelectorAll(".diente").forEach(d => {
+      d.className = "diente";
+      const numero = d.dataset.numero;
+      const info = data[numero];
+      d.classList.add(clasePorEstado(info?.estado || "sano"));
     });
   }
-}
 
-function generarOdontograma(){
-  const sup = document.getElementById("arcadaSuperior");
-  const inf = document.getElementById("arcadaInferior");
+  function seleccionarDiente(numero) {
+    dienteSeleccionado = numero;
+    document.querySelectorAll(".diente").forEach(d => d.classList.remove("activo"));
+    const actual = document.querySelector(`.diente[data-numero="${numero}"]`);
+    if (actual) actual.classList.add("activo");
 
-  for(let i=1;i<=16;i++) sup.appendChild(crearDiente(i));
-  for(let i=17;i<=32;i++) inf.appendChild(crearDiente(i));
-}
+    const data = obtenerDatos();
+    const info = data[numero] || { estado: "sano", descripcion: "" };
+    numeroInput.value = numero;
+    estadoInput.value = info.estado || "sano";
+    descripcionInput.value = info.descripcion || "";
+  }
 
-function crearDiente(numero){
-  const d = document.createElement("div");
-  d.className = "diente sano";
-  d.innerText = numero;
-  d.dataset.estado = "sano";
-  d.dataset.descripcion = "";
+  window.guardarDienteLocal = function () {
+    if (!dienteSeleccionado) {
+      alert("Selecciona un diente.");
+      return;
+    }
 
-  d.addEventListener("click", () => seleccionarDiente(numero));
-  return d;
-}
+    const data = obtenerDatos();
+    data[dienteSeleccionado] = {
+      estado: estadoInput.value,
+      descripcion: descripcionInput.value.trim()
+    };
 
-function seleccionarDiente(numero){
-  dienteSeleccionado = numero;
+    guardarDatos(data);
+    aplicarDatos();
+    alert("Diente guardado.");
+  };
 
-  // quitar selección a todos
-  document.querySelectorAll(".diente").forEach(x => x.classList.remove("selected"));
-
-  const el = getDienteEl(numero);
-  if(el) el.classList.add("selected");
-
-  // cargar a panel lo que tenga ese diente (BD o UI)
-  document.getElementById("estadoDiente").value = el?.dataset.estado || "sano";
-  const descEl = document.getElementById("descripcionDiente");
-  if(descEl) descEl.value = el?.dataset.descripcion || "";
-}
-
-function pintarDiente(numero, estado, descripcion, soloUI = false){
-  const el = getDienteEl(numero);
-  if(!el) return;
-
-  // Limpia clases de estado y pone la nueva
-  el.classList.remove("sano","caries","restaurado","extraido","fracturado","endodoncia");
-  el.classList.add(estado);
-
-  // Guarda en dataset (sirve para mostrar en panel aunque no guardes)
-  el.dataset.estado = estado;
-  el.dataset.descripcion = descripcion || "";
-  el.setAttribute("data-estado", estado); // para la mini etiqueta
-
-  // soloUI no hace nada extra, solo indica intención
-}
-
-function getDienteEl(numero){
-  return [...document.querySelectorAll(".diente")]
-    .find(d => parseInt(d.innerText) === numero);
-}
-
-/* =========================
-   GUARDAR (API) - opcional
-========================= */
-function guardarDiente(){
-  if(!dienteSeleccionado) return alert("Selecciona un diente");
-
-  const id_historial = parseInt(document.getElementById("idHistorial")?.value || "0");
-  if(!id_historial) return alert("Pon el ID del historial (id_historial)");
-
-  const estado = document.getElementById("estadoDiente").value;
-  const descripcion = document.getElementById("descripcionDiente")?.value?.trim() || "";
-
-  // Nota: el color YA CAMBIÓ por UI, aquí solo guardamos en BD
-  fetch("../api/odontograma.php",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ id_historial, numero_diente: dienteSeleccionado, estado, descripcion })
-  })
-  .then(r=>r.json())
-  .then(res=>{
-    if(!res.success) return alert(res.message || "Error al guardar");
-    alert("Guardado en BD");
-  });
-}
-
-function cargarOdontograma(){
-  fetch(`../api/odontograma.php?id_paciente=${pacienteActual}`)
-    .then(r=>r.json())
-    .then(res=>{
-      if(!res.success) return;
-
-      // reset UI
-      document.querySelectorAll(".diente").forEach(d=>{
-        d.classList.remove("caries","restaurado","extraido","fracturado","endodoncia");
-        d.classList.add("sano");
-        d.dataset.estado = "sano";
-        d.dataset.descripcion = "";
-        d.setAttribute("data-estado","sano");
-      });
-
-      // pinta lo que venga de BD (vista_odontograma)
-      res.data.forEach(item=>{
-        pintarDiente(parseInt(item.numero_diente), item.estado, item.descripcion || "", true);
-      });
-    });
-}
+  renderArcadas();
+})();

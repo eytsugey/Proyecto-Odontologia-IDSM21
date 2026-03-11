@@ -2,30 +2,95 @@
 session_start();
 require_once __DIR__ . '/../api/config/database.php';
 require_once __DIR__ . '/../api/middleware/auth.php';
-requireLogin(['doctor','secretaria']);
-$titulo='Historia clínica'; $subtitulo='La secretaria registra el resto del historial'; $active='historia';
-include '_layout_top.php';
-$pacientes = $pdo->query('SELECT id, nombre FROM pacientes ORDER BY nombre')->fetchAll();
-$pacienteId = (int)($_GET['paciente_id'] ?? ($pacientes[0]['id'] ?? 0));
+requireLogin(['doctor', 'secretaria']);
+
+$pacienteId = (int)($_GET['paciente_id'] ?? 0);
+if (!$pacienteId) {
+    header('Location: pacientes.php');
+    exit;
+}
+
+$stmt = $pdo->prepare('SELECT * FROM pacientes WHERE id = ? LIMIT 1');
+$stmt->execute([$pacienteId]);
+$paciente = $stmt->fetch();
+
+if (!$paciente) {
+    header('Location: pacientes.php');
+    exit;
+}
+
 $stmt = $pdo->prepare('SELECT * FROM historias_clinicas WHERE paciente_id = ? LIMIT 1');
 $stmt->execute([$pacienteId]);
-$h = $stmt->fetch() ?: ['alergias'=>'','cirugias'=>'','diabetes'=>'','presion_alta'=>'','presion_baja'=>'','medicamentos'=>'','habitos'=>'','motivo_consulta'=>''];
+$historia = $stmt->fetch();
+
+$titulo = 'Historia clínica';
+$subtitulo = 'Registro clínico de ' . $paciente['nombre'];
+$active = 'pacientes';
+
+$ok = isset($_GET['ok']);
+
+include '_layout_top.php';
 ?>
+
+<?php if ($ok): ?>
+<div class="notice success">Historia clínica guardada.</div>
+<?php endif; ?>
+
 <section class="panel">
-  <h2>Captura de historia clínica</h2>
-  <?php if (isset($_GET['ok'])): ?><div class="notice success">Historia clínica guardada.</div><?php endif; ?>
-  <form class="form-grid" action="../api/historia.php" method="POST">
-    <div class="field field-wide"><label>Paciente</label><select name="paciente_id" onchange="window.location='historia.php?paciente_id='+this.value"><?php foreach($pacientes as $p): ?><option value="<?php echo $p['id']; ?>" <?php echo $pacienteId===$p['id']?'selected':''; ?>><?php echo htmlspecialchars($p['nombre']); ?></option><?php endforeach; ?></select></div>
-    <input type="hidden" name="paciente_id" value="<?php echo $pacienteId; ?>">
-    <div class="field field-wide"><label>Alergias</label><input type="text" name="alergias" value="<?php echo htmlspecialchars($h['alergias']); ?>"></div>
-    <div class="field field-wide"><label>Cirugías</label><input type="text" name="cirugias" value="<?php echo htmlspecialchars($h['cirugias']); ?>"></div>
-    <div class="field"><label>Diabetes</label><input type="text" name="diabetes" value="<?php echo htmlspecialchars($h['diabetes']); ?>"></div>
-    <div class="field"><label>Presión alta</label><input type="text" name="presion_alta" value="<?php echo htmlspecialchars($h['presion_alta']); ?>"></div>
-    <div class="field"><label>Presión baja</label><input type="text" name="presion_baja" value="<?php echo htmlspecialchars($h['presion_baja']); ?>"></div>
-    <div class="field field-wide"><label>Medicamentos</label><textarea name="medicamentos"><?php echo htmlspecialchars($h['medicamentos']); ?></textarea></div>
-    <div class="field field-wide"><label>Hábitos</label><textarea name="habitos"><?php echo htmlspecialchars($h['habitos']); ?></textarea></div>
-    <div class="field field-wide"><label>Motivo de consulta</label><textarea name="motivo_consulta"><?php echo htmlspecialchars($h['motivo_consulta']); ?></textarea></div>
-    <div class="field field-wide"><button class="btn" type="submit">Guardar historia clínica</button></div>
+  <div class="toolbar">
+    <h2><?php echo htmlspecialchars($paciente['nombre']); ?></h2>
+    <a class="btn-secondary" href="pacientes.php">Volver a pacientes</a>
+  </div>
+
+  <form action="../api/historia.php" method="POST">
+    <input type="hidden" name="paciente_id" value="<?php echo (int)$pacienteId; ?>">
+
+    <div class="form-grid">
+      <div class="field field-wide">
+        <label>Alergias</label>
+        <input type="text" name="alergias" value="<?php echo htmlspecialchars($historia['alergias'] ?? ''); ?>">
+      </div>
+
+      <div class="field field-wide">
+        <label>Cirugías</label>
+        <input type="text" name="cirugias" value="<?php echo htmlspecialchars($historia['cirugias'] ?? ''); ?>">
+      </div>
+
+      <div class="field">
+        <label>Diabetes</label>
+        <input type="text" name="diabetes" value="<?php echo htmlspecialchars($historia['diabetes'] ?? ''); ?>">
+      </div>
+
+      <div class="field">
+        <label>Presión alta</label>
+        <input type="text" name="presion_alta" value="<?php echo htmlspecialchars($historia['presion_alta'] ?? ''); ?>">
+      </div>
+
+      <div class="field">
+        <label>Presión baja</label>
+        <input type="text" name="presion_baja" value="<?php echo htmlspecialchars($historia['presion_baja'] ?? ''); ?>">
+      </div>
+
+      <div class="field">
+        <label>Medicamentos</label>
+        <input type="text" name="medicamentos" value="<?php echo htmlspecialchars($historia['medicamentos'] ?? ''); ?>">
+      </div>
+
+      <div class="field field-wide">
+        <label>Hábitos</label>
+        <input type="text" name="habitos" value="<?php echo htmlspecialchars($historia['habitos'] ?? ''); ?>">
+      </div>
+
+      <div class="field field-wide">
+        <label>Motivo de consulta</label>
+        <textarea name="motivo_consulta" rows="4"><?php echo htmlspecialchars($historia['motivo_consulta'] ?? ''); ?></textarea>
+      </div>
+
+      <div class="field field-wide">
+        <button class="btn" type="submit">Guardar historia clínica</button>
+      </div>
+    </div>
   </form>
 </section>
+
 <?php include '_layout_bottom.php'; ?>

@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data[] = $pacienteId;
         $stmt->execute($data);
     }
-    header('Location: /proyecto_odontologia_funcional/public/historia.php?paciente_id=' . $pacienteId . '&ok=1');
+    header('Location: /Proyecto-Odontologia-IDSM21/public/historia.php?paciente_id=' . $pacienteId . '&ok=1');
     exit;
 }
 http_response_code(405);
