@@ -1,32 +1,88 @@
 <?php
 session_start();
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/middleware/auth.php';
+requireLogin(['doctor', 'secretaria']);
+
 header('Content-Type: application/json; charset=utf-8');
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $idPaciente = (int)($_GET['id_paciente'] ?? 0);
-    if (!$idPaciente) {
-        echo json_encode(['success' => false, 'message' => 'Paciente no válido']);
+
+$method = $_SERVER['REQUEST_METHOD'];
+
+if ($method === 'GET') {
+    $pacienteId = (int)($_GET['paciente_id'] ?? 0);
+
+    if (!$pacienteId) {
+        http_response_code(400);
+        echo json_encode(['error' => 'paciente_id requerido']);
         exit;
     }
-    $stmt = $pdo->prepare('SELECT numero_diente, estado, descripcion FROM odontograma WHERE paciente_id = ? ORDER BY numero_diente');
-    $stmt->execute([$idPaciente]);
-    echo json_encode(['success' => true, 'data' => $stmt->fetchAll()]);
+
+    $stmt = $pdo->prepare("
+        SELECT diente, estado, descripcion
+        FROM odontograma_paciente
+        WHERE paciente_id = ?
+        ORDER BY diente
+    ");
+    $stmt->execute([$pacienteId]);
+
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $data = [];
+
+    foreach ($rows as $row) {
+        $data[$row['diente']] = [
+            'estado' => $row['estado'],
+            'descripcion' => $row['descripcion']
+        ];
+    }
+
+    echo json_encode($data);
     exit;
 }
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = json_decode(file_get_contents('php://input'), true);
-    $pacienteId = (int)($data['id_paciente'] ?? 1);
-    $numero = (int)($data['numero_diente'] ?? 0);
-    $estado = trim($data['estado'] ?? 'sano');
-    $descripcion = trim($data['descripcion'] ?? '');
-    if (!$pacienteId || !$numero) {
-        echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
+
+if ($method === 'POST') {
+    $raw = file_get_contents('php://input');
+    $input = json_decode($raw, true);
+
+    if (!is_array($input)) {
+        http_response_code(400);
+        echo json_encode([
+            'error' => 'JSON inválido',
+            'raw' => $raw
+        ]);
         exit;
     }
-    $stmt = $pdo->prepare('INSERT INTO odontograma (paciente_id, numero_diente, estado, descripcion) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE estado=VALUES(estado), descripcion=VALUES(descripcion)');
-    $stmt->execute([$pacienteId, $numero, $estado, $descripcion]);
-    echo json_encode(['success' => true]);
+
+    $pacienteId = (int)($input['paciente_id'] ?? 0);
+    $diente = trim($input['diente'] ?? '');
+    $estado = trim($input['estado'] ?? '');
+    $descripcion = trim($input['descripcion'] ?? '');
+
+    if (!$pacienteId || $diente === '' || $estado === '') {
+        http_response_code(400);
+        echo json_encode([
+            'error' => 'Datos incompletos',
+            'recibido' => $input
+        ]);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("
+        INSERT INTO odontograma_paciente (paciente_id, diente, estado, descripcion)
+        VALUES (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            estado = VALUES(estado),
+            descripcion = VALUES(descripcion)
+    ");
+    $stmt->execute([$pacienteId, $diente, $estado, $descripcion]);
+
+    echo json_encode([
+        'ok' => true,
+        'message' => 'Diente guardado',
+        'paciente_id' => $pacienteId,
+        'diente' => $diente
+    ]);
     exit;
 }
-echo json_encode(['success' => false, 'message' => 'Método no permitido']);
-?>
+
+http_response_code(405);
+echo json_encode(['error' => 'Método no permitido']);

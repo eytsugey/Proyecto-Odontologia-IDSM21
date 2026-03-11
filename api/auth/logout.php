@@ -1,6 +1,6 @@
 <?php
 session_start();
 session_destroy();
-header('Location: /proyecto_odontologia_funcional/public/login.php');
+header('Location: /Proyecto-Odontologia-IDSM21/public/login.php');
 exit;
 ?>
