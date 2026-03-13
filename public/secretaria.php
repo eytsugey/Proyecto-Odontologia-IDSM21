@@ -87,7 +87,7 @@ events: [
 $eventos = [];
 foreach ($citas as $c){
 $eventos[] = '{
-title: "'.addslashes($c['nombres']).' ('.$c['hora'].')",
+title: "'.addslashes($c['nombres']).'",
 start: "'.$c['fecha'].'T'.$c['hora'].'"
 }';
 }
@@ -95,12 +95,17 @@ echo implode(",", $eventos);
 ?>
 
 ]
+
 });
+
 calendar.render();
+
 });
+
 </script>
 
 <style>
+
 /* PANEL */
 .panel{
 background:#ffffff;

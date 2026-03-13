@@ -12,6 +12,7 @@ if (!isset($active)) { $active = ''; }
 <link rel="stylesheet" href="css/admin.css">
 <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/responsive.css">
+<link rel="stylesheet" href="css/pacientes.css">
 </head>
 <body>
 <div class="layout">
