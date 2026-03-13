@@ -1,6 +1,12 @@
 CREATE DATABASE IF NOT EXISTS odontologia CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS odontologia CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE odontologia;
 
+DROP TABLE IF EXISTS odontograma;
+DROP TABLE IF EXISTS historias_clinicas;
+DROP TABLE IF EXISTS citas;
+DROP TABLE IF EXISTS pacientes;
+DROP TABLE IF EXISTS usuarios;
 DROP TABLE IF EXISTS odontograma;
 DROP TABLE IF EXISTS historias_clinicas;
 DROP TABLE IF EXISTS citas;
@@ -11,12 +17,21 @@ CREATE TABLE usuarios (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(120) NOT NULL,
   correo VARCHAR(120) NOT NULL UNIQUE,
+  nombre VARCHAR(120) NOT NULL,
+  correo VARCHAR(120) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
   rol ENUM('doctor','secretaria') NOT NULL
 );
 
 CREATE TABLE pacientes (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(150) NOT NULL,
+  sexo VARCHAR(20) NULL,
+  edad INT NULL,
+  fecha_nacimiento DATE NULL,
+  telefono VARCHAR(30) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
   nombre VARCHAR(150) NOT NULL,
   sexo VARCHAR(20) NULL,
   edad INT NULL,
@@ -35,9 +50,27 @@ CREATE TABLE citas (
   estado ENUM('pendiente','confirmada','atendida','cancelada') NOT NULL DEFAULT 'pendiente',
   CONSTRAINT fk_citas_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
 );
+  paciente_id INT NOT NULL,
+  doctor_id INT NOT NULL DEFAULT 1,
+  fecha DATE NOT NULL,
+  hora TIME NOT NULL,
+  motivo_consulta VARCHAR(255) NULL,
+  estado ENUM('pendiente','confirmada','atendida','cancelada') NOT NULL DEFAULT 'pendiente',
+  CONSTRAINT fk_citas_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+);
 
 CREATE TABLE historias_clinicas (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  paciente_id INT NOT NULL UNIQUE,
+  alergias TEXT NULL,
+  cirugias TEXT NULL,
+  diabetes VARCHAR(100) NULL,
+  presion_alta VARCHAR(100) NULL,
+  presion_baja VARCHAR(100) NULL,
+  medicamentos TEXT NULL,
+  habitos TEXT NULL,
+  motivo_consulta TEXT NULL,
+  CONSTRAINT fk_historia_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
   paciente_id INT NOT NULL UNIQUE,
   alergias TEXT NULL,
   cirugias TEXT NULL,
