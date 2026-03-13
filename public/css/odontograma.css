@@ -113,15 +113,31 @@
 .arcada-scroll{
   overflow-x: auto;
   padding-bottom: 0.35rem;
+  text-align: center;
 }
 
 .arcada{
-  display: grid;
-  grid-template-columns: repeat(16, minmax(62px, 1fr));
+  display: inline-grid;
+  grid-template-columns: repeat(16, 62px);
   gap: 0.8rem;
+  width: max-content;
   min-width: 1120px;
+  margin: 0 auto;
+}
+.arcada-box{
+  background: #fcfdff;
+  border: 1px solid var(--od-border);
+  border-radius: var(--od-radius-md);
+  padding: 1rem;
+  text-align: center;
 }
 
+.arcada-box h3{
+  margin: 0 0 0.9rem;
+  color: var(--od-primary);
+  font-size: 1.1rem;
+  text-align: left;
+}
 .diente{
   background: #fff;
   border: 2px solid #cad6e4;
