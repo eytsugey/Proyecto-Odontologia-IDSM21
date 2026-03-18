@@ -4,7 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 function requireLogin(array $roles = []): void {
     if (empty($_SESSION['usuario_id'])) {
-        header('Location: /proyecto_odontologia_funcional/public/login.php');
+        header('Location: /Proyecto-Odontologia-IDSM21/public/login.php');
         exit;
     }
     if ($roles && !in_array($_SESSION['rol'], $roles, true)) {

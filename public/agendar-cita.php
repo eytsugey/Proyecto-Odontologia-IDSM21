@@ -1,6 +1,14 @@
 <?php
-$ok = isset($_GET['ok']);
-$error = isset($_GET['error']);
+$error = $_GET['error'] ?? '';
+
+$mensajesError = [
+    '1' => 'Completa todos los datos requeridos.',
+    'fecha_pasada' => 'La fecha preferida no puede ser anterior al día de hoy.',
+    'fecha_nacimiento' => 'La fecha de nacimiento no es válida.',
+    'edad_incorrecta' => 'La edad no coincide con la fecha de nacimiento capturada.',
+];
+
+$mensajeError = $mensajesError[$error] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -24,15 +32,9 @@ $error = isset($_GET['error']);
 
   <main class="public-main">
     <section class="panel form-panel">
-      <?php if ($ok): ?>
-        <div class="notice success">
-          Solicitud enviada correctamente. La secretaria registrará el resto de la historia clínica.
-        </div>
-      <?php endif; ?>
-
-      <?php if ($error): ?>
+      <?php if ($mensajeError): ?>
         <div class="notice error">
-          Completa todos los datos requeridos.
+          <?php echo htmlspecialchars($mensajeError); ?>
         </div>
       <?php endif; ?>
 
@@ -44,7 +46,7 @@ $error = isset($_GET['error']);
         </div>
       </div>
 
-      <form action="../api/citas.php?action=solicitar" method="POST" class="cita-form">
+      <form action="../api/citas.php?action=solicitar" method="POST" class="cita-form" id="solicitud-cita-form">
         <div class="form-grid">
           <div class="field field-wide">
             <label for="nombre">Nombre</label>
@@ -78,7 +80,7 @@ $error = isset($_GET['error']);
 
           <div class="field">
             <label for="fecha_preferida">Fecha preferida</label>
-            <input id="fecha_preferida" type="date" name="fecha_preferida" required>
+            <input id="fecha_preferida" type="date" name="fecha_preferida" min="<?php echo date('Y-m-d'); ?>" required>
           </div>
 
           <div class="field">
@@ -98,5 +100,46 @@ $error = isset($_GET['error']);
       </form>
     </section>
   </main>
+
+  <script>
+    (function () {
+      const form = document.getElementById('solicitud-cita-form');
+      if (!form) return;
+
+      form.addEventListener('submit', function (event) {
+        const fechaNacimiento = document.getElementById('fecha_nacimiento').value;
+        const edad = parseInt(document.getElementById('edad').value, 10);
+        const fechaPreferida = document.getElementById('fecha_preferida').value;
+
+        if (fechaPreferida) {
+          const hoy = new Date();
+          hoy.setHours(0, 0, 0, 0);
+          const fechaElegida = new Date(fechaPreferida + 'T00:00:00');
+
+          if (fechaElegida < hoy) {
+            event.preventDefault();
+            alert('La fecha preferida no puede ser anterior al día de hoy.');
+            return;
+          }
+        }
+
+        if (fechaNacimiento && !Number.isNaN(edad)) {
+          const nacimiento = new Date(fechaNacimiento + 'T00:00:00');
+          const hoy = new Date();
+          let edadCalculada = hoy.getFullYear() - nacimiento.getFullYear();
+          const mes = hoy.getMonth() - nacimiento.getMonth();
+
+          if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+            edadCalculada--;
+          }
+
+          if (edadCalculada !== edad) {
+            event.preventDefault();
+            alert('La edad no coincide con la fecha de nacimiento capturada.');
+          }
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
