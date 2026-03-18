@@ -17,8 +17,6 @@ $mensajeError = $mensajesError[$error] ?? null;
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Agendar cita</title>
   <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="css/citas.css">
-  <link rel="stylesheet" href="css/responsive.css">
   <link rel="stylesheet" href="css/agendar_cita.css">
 </head>
 <body class="page-cita">

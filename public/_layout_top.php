@@ -6,9 +6,11 @@ if (session_status() === PHP_SESSION_NONE) {
 if (!isset($titulo)) { $titulo = 'Sistema'; }
 if (!isset($subtitulo)) { $subtitulo = ''; }
 if (!isset($active)) { $active = ''; }
+if (!isset($extra_css) || !is_array($extra_css)) { $extra_css = []; }
 
 $rol = $_SESSION['rol'] ?? '';
 $nombre = $_SESSION['nombre'] ?? 'Usuario';
+$bodyClass = trim('app-layout ' . ($active ? 'page-' . preg_replace('/[^a-z0-9\-]+/i', '-', strtolower($active)) : ''));
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -16,12 +18,13 @@ $nombre = $_SESSION['nombre'] ?? 'Usuario';
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?php echo htmlspecialchars($titulo); ?></title>
-<link rel="stylesheet" href="css/admin.css">
 <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/responsive.css">
-<link rel="stylesheet" href="css/pacientes.css">
+<?php foreach ($extra_css as $cssFile): ?>
+<link rel="stylesheet" href="<?php echo htmlspecialchars($cssFile); ?>">
+<?php endforeach; ?>
 </head>
-<body>
+<body class="<?php echo htmlspecialchars($bodyClass); ?>">
 <div class="layout">
   <aside class="sidebar">
     <h2>🦷 DentalApp</h2>
