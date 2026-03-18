@@ -42,6 +42,18 @@ include '_layout_top.php';
     <a class="btn-secondary" href="pacientes.php">Volver a pacientes</a>
   </div>
 
+  <?php if (isset($_GET['actualizada'])): ?>
+    <div class="notice success" style="margin-top:12px;">La fecha y hora de la cita fueron actualizadas.</div>
+  <?php endif; ?>
+
+  <?php if (isset($_GET['choque'])): ?>
+    <div class="notice error" style="margin-top:12px;">Ya existe una cita del doctor en la fecha y hora seleccionadas.</div>
+  <?php endif; ?>
+
+  <?php if (isset($_GET['error'])): ?>
+    <div class="notice error" style="margin-top:12px;">Completa la nueva fecha y hora para actualizar la cita.</div>
+  <?php endif; ?>
+
   <div class="cards" style="grid-template-columns:1fr 1fr; margin-top:8px;">
     <div class="card">
       <h3>Próximas citas</h3>
@@ -55,6 +67,7 @@ include '_layout_top.php';
               <th>Hora</th>
               <th>Motivo</th>
               <th>Estado</th>
+              <th>Editar</th>
             </tr>
           </thead>
           <tbody>
@@ -64,6 +77,15 @@ include '_layout_top.php';
                 <td><?php echo htmlspecialchars(substr($c['hora'],0,5)); ?></td>
                 <td><?php echo htmlspecialchars($c['motivo_consulta']); ?></td>
                 <td><span class="badge <?php echo htmlspecialchars($c['estado']); ?>"><?php echo htmlspecialchars($c['estado']); ?></span></td>
+                <td>
+                  <form action="../api/citas.php?action=actualizar" method="POST" style="display:grid; gap:6px; min-width:170px;">
+                    <input type="hidden" name="cita_id" value="<?php echo (int)$c['id']; ?>">
+                    <input type="hidden" name="paciente_id" value="<?php echo (int)$pacienteId; ?>">
+                    <input type="date" name="fecha" value="<?php echo htmlspecialchars($c['fecha']); ?>" min="<?php echo $hoy; ?>" required>
+                    <input type="time" name="hora" value="<?php echo htmlspecialchars(substr($c['hora'],0,5)); ?>" required>
+                    <button class="btn" type="submit">Guardar</button>
+                  </form>
+                </td>
               </tr>
             <?php endforeach; ?>
           </tbody>

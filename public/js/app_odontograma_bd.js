@@ -1,87 +1,130 @@
 (function () {
-  const arcadaSuperior = document.getElementById("arcadaSuperior");
-  const arcadaInferior = document.getElementById("arcadaInferior");
+  const grid = document.getElementById("odontogramaGrid");
   const numeroInput = document.getElementById("numeroDiente");
   const estadoInput = document.getElementById("estadoDiente");
   const descripcionInput = document.getElementById("descripcionDiente");
 
-  if (!arcadaSuperior || !arcadaInferior) return;
+  if (!grid) return;
 
-  const dientesSuperiores = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
-  const dientesInferiores = [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+  const filas = [
+    {
+      clase: "fila-1",
+      dientes: [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25]
+    },
+    {
+      clase: "fila-2",
+      dientes: [26, 27, 28]
+    },
+    {
+      clase: "fila-3",
+      dientes: [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35]
+    },
+    {
+      clase: "fila-4",
+      dientes: [36, 37, 38]
+    }
+  ];
+
+  const estadosPermitidos = ["sano", "caries", "restaurado", "extraido", "fracturado", "endodoncia"];
 
   let dienteSeleccionado = null;
   let datos = {};
 
   function clasePorEstado(estado) {
-    const permitidos = ["sano", "caries", "restaurado", "extraido", "fracturado", "endodoncia"];
-    return permitidos.includes(estado) ? estado : "sano";
+    return estadosPermitidos.includes(estado) ? estado : "sano";
   }
 
-  function crearDiente(numero) {
-    const div = document.createElement("div");
-    div.className = "diente sano";
-    div.dataset.numero = String(numero);
-    div.innerHTML = `<span>${numero}</span>`;
-    div.addEventListener("click", () => seleccionarDiente(numero));
-    return div;
+  function crearDienteItem(numero) {
+    const item = document.createElement("div");
+    item.className = "diente-item";
+
+    const boton = document.createElement("div");
+    boton.className = "diente sano";
+    boton.dataset.numero = String(numero);
+    boton.textContent = numero;
+    boton.addEventListener("click", () => seleccionarDiente(numero));
+
+    const estado = document.createElement("div");
+    estado.className = "estado-label";
+    estado.dataset.labelNumero = String(numero);
+    estado.textContent = "sano";
+
+    item.appendChild(boton);
+    item.appendChild(estado);
+
+    return item;
   }
 
-  function renderArcadas() {
-    arcadaSuperior.innerHTML = "";
-    arcadaInferior.innerHTML = "";
+  function renderOdontograma() {
+    grid.innerHTML = "";
 
-    dientesSuperiores.forEach(n => arcadaSuperior.appendChild(crearDiente(n)));
-    dientesInferiores.forEach(n => arcadaInferior.appendChild(crearDiente(n)));
+    filas.forEach(fila => {
+      const filaDiv = document.createElement("div");
+      filaDiv.className = `fila-odontograma ${fila.clase}`;
+
+      fila.dientes.forEach(numero => {
+        filaDiv.appendChild(crearDienteItem(numero));
+      });
+
+      grid.appendChild(filaDiv);
+    });
 
     aplicarDatos();
   }
 
   function aplicarDatos() {
-    document.querySelectorAll(".diente").forEach(d => {
-      d.className = "diente";
-      const numero = d.dataset.numero;
-      const info = datos[numero];
-      d.classList.add(clasePorEstado(info && info.estado ? info.estado : "sano"));
+    document.querySelectorAll(".diente").forEach(diente => {
+      const numero = diente.dataset.numero;
+      const info = datos[numero] || { estado: "sano", descripcion: "" };
+      const estado = clasePorEstado(info.estado);
+
+      diente.className = "diente";
+      diente.classList.add(estado);
+
+      if (dienteSeleccionado === numero) {
+        diente.classList.add("activo");
+      }
+
+      const label = document.querySelector(`.estado-label[data-label-numero="${numero}"]`);
+      if (label) {
+        label.textContent = estado;
+      }
     });
   }
 
   function seleccionarDiente(numero) {
     dienteSeleccionado = String(numero);
 
-    document.querySelectorAll(".diente").forEach(d => d.classList.remove("activo"));
-
-    const actual = document.querySelector(`.diente[data-numero="${numero}"]`);
-    if (actual) actual.classList.add("activo");
-
-    const info = datos[dienteSeleccionado] || { estado: "sano", descripcion: "" };
+    const info = datos[dienteSeleccionado] || {
+      estado: "sano",
+      descripcion: ""
+    };
 
     numeroInput.value = numero;
-    estadoInput.value = info.estado || "sano";
+    estadoInput.value = clasePorEstado(info.estado);
     descripcionInput.value = info.descripcion || "";
+
+    aplicarDatos();
   }
 
   async function cargarDesdeBD() {
     try {
       const pacienteId = window.pacienteActual;
 
-      if (!pacienteId) {
-        console.error("pacienteActual no definido");
-        return;
-      }
+      if (!pacienteId) return;
 
       const res = await fetch(`../api/odontograma.php?paciente_id=${encodeURIComponent(pacienteId)}`);
       const data = await res.json();
 
       if (!res.ok) {
-        console.error("Error al cargar odontograma:", data);
+        console.error(data);
         return;
       }
 
       datos = data || {};
-      renderArcadas();
+      renderOdontograma();
     } catch (error) {
-      console.error("Error en cargarDesdeBD:", error);
+      console.error("Error al cargar odontograma:", error);
     }
   }
 
@@ -106,8 +149,6 @@
         descripcion: descripcionInput.value.trim()
       };
 
-      console.log("Enviando payload:", payload);
-
       const res = await fetch("../api/odontograma.php", {
         method: "POST",
         headers: {
@@ -119,7 +160,6 @@
       const data = await res.json();
 
       if (!res.ok) {
-        console.error("Respuesta backend:", data);
         alert(data.error || "No se pudo guardar.");
         return;
       }
@@ -130,13 +170,21 @@
       };
 
       aplicarDatos();
-      alert("Diente guardado en la base de datos.");
+      alert("Diente guardado correctamente.");
     } catch (error) {
       console.error("Error al guardar:", error);
       alert("Ocurrió un error al guardar.");
     }
   };
 
-  renderArcadas();
+  window.recargarOdontograma = function () {
+    dienteSeleccionado = null;
+    numeroInput.value = "";
+    estadoInput.value = "sano";
+    descripcionInput.value = "";
+    cargarDesdeBD();
+  };
+
+  renderOdontograma();
   cargarDesdeBD();
 })();

@@ -7,6 +7,7 @@ requireLogin(['doctor', 'secretaria']);
 $titulo = 'Pacientes';
 $subtitulo = 'Desde esta vista puedes registrar pacientes y abrir su historia clínica, odontograma y citas.';
 $active = 'pacientes';
+$extra_css = ['css/pacientes.css'];
 
 $buscar = trim($_GET['buscar'] ?? '');
 $letra = trim($_GET['letra'] ?? '');
