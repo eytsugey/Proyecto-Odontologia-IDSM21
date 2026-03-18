@@ -10,8 +10,8 @@ if ($user && $password === $user['password'])  {
     $_SESSION['usuario_id'] = (int)$user['id'];
     $_SESSION['nombre'] = $user['nombre'];
     $_SESSION['rol'] = $user['rol'];
-    header('Location: /proyecto_odontologia_funcional/public/' . ($user['rol'] === 'secretaria' ? 'secretaria.php' : 'admin.php'));
+    header('Location: /Proyecto-Odontologia-IDSM21/public/' . ($user['rol'] === 'secretaria' ? 'secretaria.php' : 'admin.php'));
     exit;
 }
-header('Location: /proyecto_odontologia_funcional/public/login.php?error=1');
+header('Location: /Proyecto-Odontologia-IDSM21/public/login.php?error=1');
 ?>

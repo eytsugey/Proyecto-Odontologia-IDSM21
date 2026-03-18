@@ -1,3 +1,1 @@
-<?php
-echo "Sistema Odontologico funcionando";
-?>
+<?php header('Location: login.php'); exit; ?>
