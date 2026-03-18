@@ -4,6 +4,30 @@ require_once __DIR__ . '/../api/config/database.php';
 require_once __DIR__ . '/../api/middleware/auth.php';
 requireLogin(['secretaria','doctor']);
 
+/* 🔥 AJAX SIN ARCHIVO EXTRA */
+if(isset($_GET['ajax']) && $_GET['ajax'] == 'citas'){
+    
+    $fecha = $_GET['fecha'] ?? null;
+
+    if(!$fecha){
+        echo json_encode([]);
+        exit;
+    }
+
+    $stmt = $pdo->prepare('
+    SELECT c.hora, p.nombre, c.estado, c.motivo_consulta
+    FROM citas c
+    JOIN pacientes p ON p.id = c.paciente_id
+    WHERE c.fecha = ?
+    ORDER BY c.hora
+    ');
+
+    $stmt->execute([$fecha]);
+
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    exit;
+}
+
 $titulo='Panel Secretaria';
 $subtitulo='Registro de pacientes, citas e historia clínica';
 $active='secretaria';
@@ -19,7 +43,7 @@ WHERE c.fecha = CURDATE()
 ORDER BY c.hora
 ')->fetchAll();
 
-/* CITAS AGRUPADAS PARA CALENDARIO */
+/* CITAS PARA CALENDARIO */
 $citas = $pdo->query('
 SELECT 
 c.fecha,
@@ -47,7 +71,7 @@ ORDER BY c.fecha, c.hora
 <tbody>
 <?php foreach ($hoy as $c): ?>
 <tr>
-<td><?php echo htmlspecialchars($c['hora']); ?></td>
+<td><?php echo substr(htmlspecialchars($c['hora']),0,5); ?></td>
 <td><?php echo htmlspecialchars($c['nombre']); ?></td>
 <td>
 <span class="badge <?php echo htmlspecialchars($c['estado']); ?>">
@@ -57,7 +81,6 @@ ORDER BY c.fecha, c.hora
 </tr>
 <?php endforeach; ?>
 </tbody>
-
 </table>
 </section>
 
@@ -66,12 +89,34 @@ ORDER BY c.fecha, c.hora
 <div id="calendar"></div>
 </section>
 
+<!-- 🔥 NUEVA AGENDA -->
+<section class="panel">
+<h2>Agenda del día</h2>
+
+<table class="table" id="agendaDia">
+<thead>
+<tr>
+<th>Hora</th>
+<th>Paciente</th>
+<th>Procedimiento</th>
+<th>Estado</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td colspan="4">Selecciona un día</td>
+</tr>
+</tbody>
+</table>
+
+</section>
+
 <!-- FULLCALENDAR -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
 
 <script>
-
 document.addEventListener('DOMContentLoaded', function() {
 
 var calendarEl = document.getElementById('calendar');
@@ -81,32 +126,66 @@ var calendar = new FullCalendar.Calendar(calendarEl, {
 initialView: 'dayGridMonth',
 locale: 'es',
 
-events: [
+/* 🔥 CLICK EN DÍA */
+dateClick: function(info) {
+    cargarAgenda(info.dateStr);
+},
 
+events: [
 <?php
 $eventos = [];
 foreach ($citas as $c){
 $eventos[] = '{
-title: "'.addslashes($c['nombres']).'",
+title: "'.addslashes($c['nombres']).' ('.substr($c['hora'],0,5).')",
 start: "'.$c['fecha'].'T'.$c['hora'].'"
 }';
 }
 echo implode(",", $eventos);
 ?>
-
 ]
 
 });
 
 calendar.render();
 
+/* 🔥 CARGAR HOY AUTOMÁTICO */
+cargarAgenda(new Date().toISOString().split('T')[0]);
+
 });
 
+/* 🔥 FUNCIÓN AJAX */
+function cargarAgenda(fecha){
+
+fetch('secretaria.php?ajax=citas&fecha=' + fecha)
+.then(res => res.json())
+.then(data => {
+
+let tabla = document.querySelector('#agendaDia tbody');
+tabla.innerHTML = '';
+
+if(data.length === 0){
+tabla.innerHTML = '<tr><td colspan="4">No hay citas</td></tr>';
+return;
+}
+
+data.forEach(cita => {
+
+tabla.innerHTML += `
+<tr>
+<td>${cita.hora.substring(0,5)}</td>
+<td>${cita.nombre}</td>
+<td>${cita.motivo_consulta ?? 'N/A'}</td>
+<td><span class="badge ${cita.estado}">${cita.estado}</span></td>
+</tr>
+`;
+
+});
+
+});
+}
 </script>
 
 <style>
-
-/* PANEL */
 .panel{
 background:#ffffff;
 padding:20px;
@@ -120,7 +199,6 @@ margin-bottom:15px;
 color:#2c3e50;
 }
 
-/* TABLA */
 .table{
 width:100%;
 border-collapse:collapse;
@@ -132,12 +210,7 @@ background:#3498db;
 color:white;
 }
 
-.table th{
-padding:12px;
-text-align:left;
-}
-
-.table td{
+.table th, .table td{
 padding:10px;
 border-bottom:1px solid #eee;
 }
@@ -146,7 +219,6 @@ border-bottom:1px solid #eee;
 background:#f5f7fa;
 }
 
-/* BADGES */
 .badge{
 padding:5px 10px;
 border-radius:20px;
@@ -154,22 +226,9 @@ font-size:12px;
 font-weight:bold;
 }
 
-.badge.pendiente{
-background:#f39c12;
-color:white;
-}
-
-.badge.confirmada{
-background:#27ae60;
-color:white;
-}
-
-.badge.cancelada{
-background:#e74c3c;
-color:white;
-}
-
-/* CALENDARIO */
+.badge.pendiente{ background:#f39c12; color:white; }
+.badge.confirmada{ background:#27ae60; color:white; }
+.badge.cancelada{ background:#e74c3c; color:white; }
 
 #calendar{
 max-width:1000px;
@@ -183,11 +242,6 @@ padding:3px;
 border-radius:5px;
 font-size:12px;
 }
-
-.fc-daygrid-event:hover{
-background:#2980b9;
-}
-
 </style>
 
 <?php include '_layout_bottom.php'; ?>
