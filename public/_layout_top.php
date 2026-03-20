@@ -30,9 +30,11 @@ $bodyClass = trim('app-layout ' . ($active ? 'page-' . preg_replace('/[^a-z0-9\-
     <h2>🦷 DentalApp</h2>
     <nav>
       <?php if ($rol === 'doctor'): ?>
+      
         <a class="<?php echo $active === 'admin' ? 'active' : ''; ?>" href="admin.php">Panel doctor</a>
         <a class="<?php echo $active === 'pacientes' ? 'active' : ''; ?>" href="pacientes.php">Pacientes</a>
         <a class="<?php echo $active === 'citas' ? 'active' : ''; ?>" href="citas.php">Citas</a>
+          <a class="<?php echo $active === 'doctor_agenda' ? 'active' : ''; ?>" href="doctor_agenda.php">Agenda</a>
       <?php elseif ($rol === 'secretaria'): ?>
         <a class="<?php echo $active === 'secretaria' ? 'active' : ''; ?>" href="secretaria.php">Panel secretaria</a>
         <a class="<?php echo $active === 'pacientes' ? 'active' : ''; ?>" href="pacientes.php">Pacientes</a>
