@@ -19,6 +19,32 @@ if (!$paciente) {
     exit;
 }
 
+$edadPaciente = null;
+if (!empty($paciente['fecha_nacimiento'])) {
+    try {
+        $nacimiento = new DateTime($paciente['fecha_nacimiento']);
+        $hoy = new DateTime();
+        if ($nacimiento <= $hoy) {
+            $edadPaciente = $nacimiento->diff($hoy)->y;
+        }
+    } catch (Exception $e) {
+        $edadPaciente = null;
+    }
+}
+
+if ($edadPaciente === null && isset($paciente['edad']) && $paciente['edad'] !== '') {
+    $edadPaciente = (int)$paciente['edad'];
+}
+
+$tipoDenticion = 'permanente';
+if ($edadPaciente !== null) {
+    if ($edadPaciente <= 5) {
+        $tipoDenticion = 'temporal';
+    } elseif ($edadPaciente <= 12) {
+        $tipoDenticion = 'mixta';
+    }
+}
+
 $titulo = 'Odontograma';
 $subtitulo = 'Selecciona un diente y cambia el estado. El color se actualiza al instante.';
 $active = 'pacientes';
@@ -33,18 +59,28 @@ include '_layout_top.php';
       <h2 class="odontograma-paciente">
         Paciente: <?php echo htmlspecialchars($paciente['nombre']); ?>
       </h2>
+      <div class="odontograma-meta">
+        <span><strong>Edad:</strong> <?php echo $edadPaciente !== null ? (int)$edadPaciente . ' años' : 'No registrada'; ?></span>
+        <span><strong>Dentición:</strong> <?php echo ucfirst($tipoDenticion); ?></span>
+      </div>
     </div>
 
     <a class="btn-secondary" href="pacientes.php">Volver a pacientes</a>
   </div>
 
   <div class="odontograma-card">
-    <div class="odontograma-grid" id="odontogramaGrid"></div>
+    <div class="odontograma-leyenda">
+      <span class="badge badge-tipo badge-activo" id="badgeTipoDenticion"></span>
+      <span class="badge">Temporal: 55-51 / 61-65 / 85-81 / 71-75</span>
+      <span class="badge">Permanente: 18-28 / 48-38</span>
+    </div>
+
+    <div class="odontograma-secciones" id="odontogramaSecciones"></div>
 
     <div class="odontograma-formulario">
       <div class="campo-sm">
-        <label for="numeroDiente">ID Historial:</label>
-        <input type="number" id="numeroDiente" readonly>
+        <label for="numeroDiente">Diente:</label>
+        <input type="text" id="numeroDiente" readonly>
       </div>
 
       <div class="campo-sm">
@@ -74,6 +110,8 @@ include '_layout_top.php';
 
 <script>
 window.pacienteActual = <?php echo (int)$pacienteId; ?>;
+window.pacienteEdad = <?php echo $edadPaciente !== null ? (int)$edadPaciente : 'null'; ?>;
+window.tipoDenticionInicial = <?php echo json_encode($tipoDenticion); ?>;
 </script>
 <script src="js/app_odontograma_bd.js"></script>
 
