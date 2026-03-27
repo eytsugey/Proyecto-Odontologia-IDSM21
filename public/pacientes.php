@@ -114,17 +114,6 @@ include '_layout_top.php';
       <button type="submit" class="btn">Buscar</button>
       <a href="pacientes.php" class="btn-secondary">Limpiar</a>
     </form>
-
-    <div class="letter-filter">
-      <?php foreach (range('A', 'Z') as $ltr): ?>
-        <a 
-          class="btn-letter <?php echo ($letra === $ltr) ? 'active' : ''; ?>" 
-          href="pacientes.php?letra=<?php echo $ltr; ?>"
-        >
-          <?php echo $ltr; ?>
-        </a>
-      <?php endforeach; ?>
-    </div>
   </div>
 
   <div class="table-wrap">
