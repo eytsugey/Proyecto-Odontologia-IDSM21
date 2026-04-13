@@ -4,7 +4,29 @@ require_once __DIR__ . '/../api/config/database.php';
 require_once __DIR__ . '/../api/middleware/auth.php';
 requireLogin(['secretaria','doctor']);
 
-/* 🔥 AJAX SIN ARCHIVO EXTRA */
+/* 🔥 CAMBIAR ESTADO (DEBE IR ARRIBA) */
+if(isset($_GET['accion']) && isset($_GET['id'])){
+
+    $id = $_GET['id'];
+    $accion = $_GET['accion'];
+
+    if($accion == 'confirmar'){
+        $estado = 'confirmada';
+    } elseif($accion == 'cancelar'){
+        $estado = 'cancelada';
+    } else {
+        header("Location: secretaria.php");
+        exit;
+    }
+
+    $stmt = $pdo->prepare("UPDATE citas SET estado = ? WHERE id = ?");
+    $stmt->execute([$estado, $id]);
+
+    header("Location: secretaria.php");
+    exit;
+}
+
+/* 🔥 AJAX */
 if(isset($_GET['ajax']) && $_GET['ajax'] == 'citas'){
     
     $fecha = $_GET['fecha'] ?? null;
@@ -15,7 +37,7 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'citas'){
     }
 
     $stmt = $pdo->prepare('
-    SELECT c.hora, p.nombre, c.estado, c.motivo_consulta
+    SELECT c.id, c.paciente_id, c.fecha, c.hora, p.nombre, c.estado, c.motivo_consulta
     FROM citas c
     JOIN pacientes p ON p.id = c.paciente_id
     WHERE c.fecha = ?
@@ -28,22 +50,16 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'citas'){
     exit;
 }
 
-$titulo='Panel Secretaria';
-$subtitulo='Registro de pacientes, citas e historia clínica';
-$active='secretaria';
-
-include '_layout_top.php';
-
-/* CITAS DE HOY */
+/* 🔥 CITAS HOY */
 $hoy = $pdo->query('
-SELECT c.id, p.nombre, c.hora, c.estado
+SELECT c.id, c.paciente_id, c.fecha, c.hora, p.nombre, c.estado, c.motivo_consulta
 FROM citas c
 JOIN pacientes p ON p.id = c.paciente_id
 WHERE c.fecha = CURDATE()
 ORDER BY c.hora
 ')->fetchAll();
 
-/* CITAS PARA CALENDARIO */
+/* 🔥 CALENDARIO */
 $citas = $pdo->query('
 SELECT 
 c.fecha,
@@ -54,29 +70,47 @@ JOIN pacientes p ON p.id = c.paciente_id
 GROUP BY c.fecha, c.hora
 ORDER BY c.fecha, c.hora
 ')->fetchAll();
+
+$titulo='Panel Secretaria';
+$subtitulo='Registro de pacientes, citas e historia clínica';
+$active='secretaria';
+
+include '_layout_top.php';
 ?>
 
 <section class="panel">
-<h2>Citas de hoy</h2>
+<h2 id="tituloCitas">Citas de hoy</h2>
 
 <table class="table">
 <thead>
 <tr>
-<th>Hora</th>
 <th>Paciente</th>
+<th>Fecha</th>
+<th>Hora</th>
+<th>Motivo</th>
 <th>Estado</th>
+<th>Acciones</th>
 </tr>
 </thead>
 
-<tbody>
+<tbody id="tablaCitasHoy">
 <?php foreach ($hoy as $c): ?>
 <tr>
-<td><?php echo substr(htmlspecialchars($c['hora']),0,5); ?></td>
 <td><?php echo htmlspecialchars($c['nombre']); ?></td>
+<td><?php echo htmlspecialchars($c['fecha']); ?></td>
+<td><?php echo substr(htmlspecialchars($c['hora']),0,5); ?></td>
+<td><?php echo htmlspecialchars($c['motivo_consulta'] ?? 'N/A'); ?></td>
+
 <td>
 <span class="badge <?php echo htmlspecialchars($c['estado']); ?>">
 <?php echo htmlspecialchars($c['estado']); ?>
 </span>
+</td>
+
+<td>
+<a href="citas_paciente.php?paciente_id=<?php echo $c['paciente_id']; ?>">Editar</a> |
+<a href="secretaria.php?accion=confirmar&id=<?php echo $c['id']; ?>">Confirmar</a> |
+<a href="secretaria.php?accion=cancelar&id=<?php echo $c['id']; ?>">Cancelar</a>
 </td>
 </tr>
 <?php endforeach; ?>
@@ -89,30 +123,6 @@ ORDER BY c.fecha, c.hora
 <div id="calendar"></div>
 </section>
 
-<!-- 🔥 NUEVA AGENDA -->
-<section class="panel">
-<h2>Agenda del día</h2>
-
-<table class="table" id="agendaDia">
-<thead>
-<tr>
-<th>Hora</th>
-<th>Paciente</th>
-<th>Procedimiento</th>
-<th>Estado</th>
-</tr>
-</thead>
-
-<tbody>
-<tr>
-<td colspan="4">Selecciona un día</td>
-</tr>
-</tbody>
-</table>
-
-</section>
-
-<!-- FULLCALENDAR -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
 
@@ -126,7 +136,6 @@ var calendar = new FullCalendar.Calendar(calendarEl, {
 initialView: 'dayGridMonth',
 locale: 'es',
 
-/* 🔥 CLICK EN DÍA */
 dateClick: function(info) {
     cargarAgenda(info.dateStr);
 },
@@ -136,7 +145,7 @@ events: [
 $eventos = [];
 foreach ($citas as $c){
 $eventos[] = '{
-title: "'.addslashes($c['nombres']).' ('.substr($c['hora'],0,5).')",
+title: "'.addslashes($c['nombres']).'",
 start: "'.$c['fecha'].'T'.$c['hora'].'"
 }';
 }
@@ -148,23 +157,26 @@ echo implode(",", $eventos);
 
 calendar.render();
 
-/* 🔥 CARGAR HOY AUTOMÁTICO */
+/* 🔥 CARGAR HOY */
 cargarAgenda(new Date().toISOString().split('T')[0]);
 
 });
 
-/* 🔥 FUNCIÓN AJAX */
+/* 🔥 AJAX */
 function cargarAgenda(fecha){
 
 fetch('secretaria.php?ajax=citas&fecha=' + fecha)
 .then(res => res.json())
 .then(data => {
 
-let tabla = document.querySelector('#agendaDia tbody');
+let tabla = document.querySelector('#tablaCitasHoy');
+let titulo = document.getElementById('tituloCitas');
+
 tabla.innerHTML = '';
+titulo.innerText = 'Citas del ' + fecha;
 
 if(data.length === 0){
-tabla.innerHTML = '<tr><td colspan="4">No hay citas</td></tr>';
+tabla.innerHTML = '<tr><td colspan="6">No hay citas</td></tr>';
 return;
 }
 
@@ -172,10 +184,16 @@ data.forEach(cita => {
 
 tabla.innerHTML += `
 <tr>
-<td>${cita.hora.substring(0,5)}</td>
 <td>${cita.nombre}</td>
+<td>${cita.fecha}</td>
+<td>${cita.hora.substring(0,5)}</td>
 <td>${cita.motivo_consulta ?? 'N/A'}</td>
 <td><span class="badge ${cita.estado}">${cita.estado}</span></td>
+<td>
+<a href="citas_paciente.php?paciente_id=${cita.paciente_id}">Editar</a> |
+<a href="secretaria.php?accion=confirmar&id=${cita.id}">Confirmar</a> |
+<a href="secretaria.php?accion=cancelar&id=${cita.id}">Cancelar</a>
+</td>
 </tr>
 `;
 
@@ -194,15 +212,9 @@ box-shadow:0 4px 10px rgba(0,0,0,0.08);
 margin-bottom:30px;
 }
 
-.panel h2{
-margin-bottom:15px;
-color:#2c3e50;
-}
-
 .table{
 width:100%;
 border-collapse:collapse;
-font-family:Arial, sans-serif;
 }
 
 .table thead{
@@ -215,15 +227,10 @@ padding:10px;
 border-bottom:1px solid #eee;
 }
 
-.table tr:hover{
-background:#f5f7fa;
-}
-
 .badge{
 padding:5px 10px;
 border-radius:20px;
 font-size:12px;
-font-weight:bold;
 }
 
 .badge.pendiente{ background:#f39c12; color:white; }
@@ -233,14 +240,6 @@ font-weight:bold;
 #calendar{
 max-width:1000px;
 margin:30px auto;
-}
-
-.fc-daygrid-event{
-background:#3498db;
-border:none;
-padding:3px;
-border-radius:5px;
-font-size:12px;
 }
 </style>
 

@@ -1,307 +1,60 @@
 :root{
-  --od-primary: #23479b;
-  --od-primary-soft: #eaf1ff;
-  --od-secondary: #2f67d8;
-  --od-bg-soft: #f8fbff;
-  --od-panel: #ffffff;
-  --od-text: #13263d;
-  --od-muted: #60758c;
-  --od-border: #d9e4ef;
-  --od-shadow: 0 8px 24px rgba(25, 58, 120, 0.08);
-  --od-radius-lg: 22px;
-  --od-radius-md: 16px;
-  --od-radius-sm: 12px;
+  --od-bg: #f4f6f8;
+  --od-card: #ffffff;
+  --od-text: #1f2937;
+  --od-muted: #6b7280;
+  --od-border: #e5e7eb;
+  --od-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  --od-radius: 22px;
+  --estado-sano: #d9f2e5;
+  --estado-caries: #fecaca;
+  --estado-restaurado: #fde68a;
+  --estado-extraido: #e5e7eb;
+  --estado-fracturado: #fdba74;
+  --estado-endodoncia: #ddd6fe;
 }
 
-.odontograma-panel{
-  padding: 1.5rem;
+.odontograma-vista{ padding: 8px 0 0; }
+.odontograma-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; }
+.odontograma-header h2{ margin:0; font-size:1.9rem; color:#0f172a; }
+.odontograma-paciente{ margin:6px 0 0; color:var(--od-muted); }
+.odontograma-meta{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; color:#334155; }
+.odontograma-meta span, .badge{ background:#f8fafc; border:1px solid var(--od-border); border-radius:999px; padding:7px 12px; font-size:.92rem; }
+.badge-activo{ background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
+.odontograma-card{ background:var(--od-card); border-radius:24px; box-shadow:var(--od-shadow); padding:28px 28px 20px; }
+.odontograma-leyenda{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:22px; }
+.odontograma-secciones{ display:grid; gap:24px; margin-bottom:30px; }
+.odontograma-seccion{ border:1px solid var(--od-border); border-radius:20px; padding:18px; background:#fff; overflow-x:auto; }
+.odontograma-titulo{ margin:0 0 16px; color:#0f172a; font-size:1.1rem; }
+.odontograma-grid{ display:flex; flex-direction:column; align-items:center; gap:24px; min-width:max-content; }
+.fila-odontograma{ display:grid; gap:14px; justify-content:center; }
+.fila-1, .fila-3{ grid-template-columns:repeat(13, 64px); }
+.fila-2, .fila-4{ grid-template-columns:repeat(3, 64px); }
+.fila-temp{ grid-template-columns:repeat(10, 64px); }
+.diente-item{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+.diente{ width:64px; height:64px; border:2px solid transparent; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:1rem; font-weight:500; cursor:pointer; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; color:#111827; user-select:none; }
+.diente:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(15, 23, 42, 0.08); }
+.diente.activo{ border-color:#2563eb; box-shadow:0 0 0 4px rgba(37, 99, 235, 0.15); }
+.estado-label{ font-size:.86rem; color:#475569; line-height:1; text-transform:lowercase; }
+.diente.sano{ background:var(--estado-sano); }
+.diente.caries{ background:var(--estado-caries); }
+.diente.restaurado{ background:var(--estado-restaurado); }
+.diente.extraido{ background:var(--estado-extraido); }
+.diente.fracturado{ background:var(--estado-fracturado); }
+.diente.endodoncia{ background:var(--estado-endodoncia); }
+.odontograma-formulario{ display:grid; grid-template-columns:180px 180px minmax(280px,1fr) auto; gap:14px; align-items:end; }
+.campo-sm, .campo-lg{ display:flex; flex-direction:column; gap:6px; }
+.campo-sm label, .campo-lg label{ font-size:.95rem; color:#475569; }
+.campo-sm input, .campo-sm select, .campo-lg textarea{ width:100%; border:1px solid #cfd8e3; border-radius:10px; padding:10px 12px; font-size:1rem; background:#fff; color:#111827; box-sizing:border-box; }
+.campo-lg textarea{ resize:vertical; min-height:44px; }
+.odontograma-botones{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+@media (max-width: 1200px){
+  .odontograma-card{ overflow-x:auto; }
+  .odontograma-formulario{ grid-template-columns:1fr 1fr; }
+  .campo-lg, .odontograma-botones{ grid-column:1 / -1; }
 }
-
-.odontograma-toolbar{
-  align-items: flex-start;
-  margin-bottom: 1rem;
-}
-
-.odontograma-toolbar h2{
-  margin: 0;
-  font-size: 2rem;
-  color: var(--od-primary);
-}
-
-.odontograma-subinfo{
-  margin: 0.4rem 0 0;
-  color: var(--od-muted);
-  font-size: 1rem;
-}
-
-.odontograma-leyenda{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.7rem;
-  margin-bottom: 1.4rem;
-  padding: 1rem;
-  background: linear-gradient(180deg, #fbfdff 0%, #f5f9ff 100%);
-  border: 1px solid var(--od-border);
-  border-radius: var(--od-radius-md);
-}
-
-.badge-estado{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 0.85rem;
-  border-radius: 999px;
-  font-size: 0.92rem;
-  font-weight: 700;
-  border: 1px solid transparent;
-}
-
-.badge-estado.sano{
-  background: #f8fafc;
-  color: #0f172a;
-  border-color: #dbe3ec;
-}
-
-.badge-estado.caries{
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #f3b0b0;
-}
-
-.badge-estado.restaurado{
-  background: #dbeafe;
-  color: #1d4ed8;
-  border-color: #b7d2fd;
-}
-
-.badge-estado.extraido{
-  background: #e5e7eb;
-  color: #374151;
-  border-color: #d1d5db;
-}
-
-.badge-estado.fracturado{
-  background: #fef3c7;
-  color: #92400e;
-  border-color: #f8dea0;
-}
-
-.badge-estado.endodoncia{
-  background: #ede9fe;
-  color: #6d28d9;
-  border-color: #d8cdfd;
-}
-
-.odontograma-board{
-  display: grid;
-  gap: 1.25rem;
-}
-
-.arcada-box{
-  background: #fcfdff;
-  border: 1px solid var(--od-border);
-  border-radius: var(--od-radius-md);
-  padding: 1rem;
-}
-
-.arcada-box h3{
-  margin: 0 0 0.9rem;
-  color: var(--od-primary);
-  font-size: 1.1rem;
-}
-
-.arcada-scroll{
-  overflow-x: auto;
-  padding-bottom: 0.35rem;
-  text-align: center;
-}
-
-.arcada{
-  display: inline-grid;
-  grid-template-columns: repeat(16, 62px);
-  gap: 0.8rem;
-  width: max-content;
-  min-width: 1120px;
-  margin: 0 auto;
-}
-.arcada-box{
-  background: #fcfdff;
-  border: 1px solid var(--od-border);
-  border-radius: var(--od-radius-md);
-  padding: 1rem;
-  text-align: center;
-}
-
-.arcada-box h3{
-  margin: 0 0 0.9rem;
-  color: var(--od-primary);
-  font-size: 1.1rem;
-  text-align: left;
-}
-.diente{
-  background: #fff;
-  border: 2px solid #cad6e4;
-  border-radius: 14px;
-  min-height: 78px;
-  padding: 0.75rem 0.4rem;
-  text-align: center;
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 0.96rem;
-  color: var(--od-text);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: 0.2s ease;
-  box-shadow: 0 2px 8px rgba(18, 38, 61, 0.03);
-}
-
-.diente:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.08);
-}
-
-.diente.activo{
-  border-color: #23479b;
-  box-shadow: 0 0 0 4px rgba(35, 71, 155, 0.15);
-}
-
-.diente.sano{
-  background: #f8fafc;
-  color: #0f172a;
-}
-
-.diente.caries{
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #efb1b1;
-}
-
-.diente.restaurado{
-  background: #dbeafe;
-  color: #1d4ed8;
-  border-color: #b7d2fd;
-}
-
-.diente.extraido{
-  background: #e5e7eb;
-  color: #374151;
-  border-color: #d1d5db;
-}
-
-.diente.fracturado{
-  background: #fef3c7;
-  color: #92400e;
-  border-color: #f2d68f;
-}
-
-.diente.endodoncia{
-  background: #ede9fe;
-  color: #6d28d9;
-  border-color: #d5c5fd;
-}
-
-.odontograma-divider{
-  height: 1px;
-  background: var(--od-border);
-  margin: 1.5rem 0;
-}
-
-.odontograma-form-card{
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-  border: 1px solid var(--od-border);
-  border-radius: var(--od-radius-md);
-  padding: 1.2rem;
-}
-
-.odontograma-form-card h3{
-  margin: 0 0 1rem;
-  color: var(--od-primary);
-  font-size: 1.15rem;
-}
-
-.odontograma-form-grid{
-  grid-template-columns: repeat(12, 1fr);
-  gap: 1rem;
-}
-
-.odontograma-form-grid .field{
-  grid-column: span 6;
-}
-
-.odontograma-form-grid .field.field-wide{
-  grid-column: span 12;
-}
-
-.odontograma-form-grid input,
-.odontograma-form-grid select,
-.odontograma-form-grid textarea{
-  width: 100%;
-  border: 1px solid var(--od-border);
-  border-radius: 14px;
-  padding: 0.85rem 1rem;
-  font-size: 1rem;
-  outline: none;
-  background: #fff;
-  transition: 0.2s ease;
-}
-
-.odontograma-form-grid input:focus,
-.odontograma-form-grid select:focus,
-.odontograma-form-grid textarea:focus{
-  border-color: var(--od-secondary);
-  box-shadow: 0 0 0 4px rgba(47, 103, 216, 0.12);
-}
-
-.odontograma-form-grid textarea{
-  resize: vertical;
-  min-height: 110px;
-}
-
-.odontograma-actions{
-  display: flex;
-  justify-content: flex-end;
-}
-
-.odontograma-actions .btn{
-  min-width: 220px;
-}
-
-@media (max-width: 900px){
-  .odontograma-form-grid .field{
-    grid-column: span 12;
-  }
-
-  .odontograma-toolbar{
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .odontograma-actions{
-    justify-content: stretch;
-  }
-
-  .odontograma-actions .btn{
-    width: 100%;
-  }
-}
-
-@media (max-width: 640px){
-  .odontograma-panel{
-    padding: 1rem;
-  }
-
-  .odontograma-toolbar h2{
-    font-size: 1.5rem;
-  }
-
-  .arcada{
-    min-width: 980px;
-    grid-template-columns: repeat(16, minmax(56px, 1fr));
-  }
-
-  .diente{
-    min-height: 70px;
-    font-size: 0.9rem;
-  }
+@media (max-width: 768px){
+  .odontograma-card{ padding:18px; }
+  .odontograma-formulario{ grid-template-columns:1fr; }
+  .odontograma-header{ flex-direction:column; align-items:flex-start; }
 }
