@@ -42,7 +42,7 @@
 .diente.extraido{ background:var(--estado-extraido); }
 .diente.fracturado{ background:var(--estado-fracturado); }
 .diente.endodoncia{ background:var(--estado-endodoncia); }
-.odontograma-formulario{ display:grid; grid-template-columns:180px 180px minmax(280px,1fr) auto; gap:14px; align-items:end; }
+.odontograma-formulario{ display:grid; grid-template-columns:180px 180px minmax(240px,1fr) minmax(220px,280px); gap:14px; align-items:end; }
 .campo-sm, .campo-lg{ display:flex; flex-direction:column; gap:6px; }
 .campo-sm label, .campo-lg label{ font-size:.95rem; color:#475569; }
 .campo-sm input, .campo-sm select, .campo-lg textarea{ width:100%; border:1px solid #cfd8e3; border-radius:10px; padding:10px 12px; font-size:1rem; background:#fff; color:#111827; box-sizing:border-box; }
@@ -57,4 +57,18 @@
   .odontograma-card{ padding:18px; }
   .odontograma-formulario{ grid-template-columns:1fr; }
   .odontograma-header{ flex-direction:column; align-items:flex-start; }
+}
+
+.campo-ayuda{ display:flex; flex-direction:column; gap:6px; }
+.ayuda-cotizacion{ border:1px dashed #cbd5e1; border-radius:12px; background:#f8fafc; padding:12px 14px; color:#475569; min-height:44px; display:flex; align-items:center; }
+.odontograma-cotizacion{ margin-top:18px; border:1px solid var(--od-border); border-radius:18px; background:#f8fafc; padding:16px 18px; }
+.cotizacion-contenido{ display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.cotizacion-contenido h3{ margin:0 0 4px; font-size:1rem; color:#0f172a; }
+.cotizacion-contenido p{ margin:0; color:#475569; }
+@media (max-width: 1200px){
+  .odontograma-cotizacion{ margin-top:16px; }
+}
+@media (max-width: 768px){
+  .cotizacion-contenido{ flex-direction:column; align-items:stretch; }
+  .cotizacion-contenido .btn{ width:100%; }
 }

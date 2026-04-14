@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config/app.php';
 require_once __DIR__ . '/middleware/auth.php';
 requireLogin(['doctor', 'secretaria']);
 
@@ -12,15 +13,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $telefono = trim($_POST['telefono'] ?? '');
 
     if ($nombre === '' || $telefono === '' || $sexo === '') {
-        header('Location: /Proyecto-Odontologia-IDSM21/public/pacientes.php?error=1');
-        exit;
+        redirectPublic('pacientes.php?error=1');
     }
 
     $stmt = $pdo->prepare('INSERT INTO pacientes (nombre, sexo, edad, fecha_nacimiento, telefono) VALUES (?,?,?,?,?)');
     $stmt->execute([$nombre, $sexo, $edad, $fecha_nacimiento, $telefono]);
 
-    header('Location: /Proyecto-Odontologia-IDSM21/public/pacientes.php?ok=1');
-    exit;
+    redirectPublic('pacientes.php?ok=1');
 }
 
 http_response_code(405);

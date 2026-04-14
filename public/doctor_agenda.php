@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../api/config/database.php';
+require_once __DIR__ . '/../api/helpers/schema.php';
 require_once __DIR__ . '/../api/middleware/auth.php';
 
 requireLogin(['doctor']);
@@ -13,22 +14,27 @@ $extra_css = ['css/doctor_agenda.css'];
 include '_layout_top.php';
 
 $fecha = $_GET['fecha'] ?? date('Y-m-d');
+$mode = citasDoctorMode($pdo);
 
-$stmt = $pdo->prepare("
-    SELECT 
-        c.id,
-        c.paciente_id,
-        p.nombre AS paciente,
-        c.fecha,
-        c.hora,
-        c.motivo_consulta,
-        c.estado
-    FROM citas c
-    INNER JOIN pacientes p ON p.id = c.paciente_id
-    WHERE c.estado = 'confirmada'
-      AND c.fecha = ?
-    ORDER BY c.hora ASC
-");
+if ($mode === 'cedula') {
+    $sql = "
+        SELECT c.id, c.paciente_id, p.nombre AS paciente, c.fecha, c.hora, c.motivo_consulta, LOWER(c.estado) AS estado
+        FROM citas c
+        INNER JOIN pacientes p ON p.id = c.paciente_id
+        WHERE LOWER(c.estado) = 'confirmada' AND c.fecha = ?
+        ORDER BY c.hora ASC
+    ";
+} else {
+    $sql = "
+        SELECT c.id, c.paciente_id, p.nombre AS paciente, c.fecha, c.hora, c.motivo_consulta, LOWER(c.estado) AS estado
+        FROM citas c
+        INNER JOIN pacientes p ON p.id = c.paciente_id
+        WHERE LOWER(c.estado) = 'confirmada' AND c.fecha = ?
+        ORDER BY c.hora ASC
+    ";
+}
+
+$stmt = $pdo->prepare($sql);
 $stmt->execute([$fecha]);
 $citas = $stmt->fetchAll();
 
@@ -86,29 +92,15 @@ $manana = date('Y-m-d', strtotime('+1 day'));
   </div>
 
   <?php if (empty($citas)): ?>
-    <div class="agenda-empty">
-      No hay citas confirmadas para esta fecha.
-    </div>
+    <div class="agenda-empty">No hay citas confirmadas para esta fecha.</div>
   <?php else: ?>
     <div class="agenda-compact-list">
       <?php foreach ($citas as $c): ?>
         <div class="agenda-row">
-          <div class="agenda-col hora">
-            <?php echo htmlspecialchars(substr($c['hora'], 0, 5)); ?>
-          </div>
-
-          <div class="agenda-col paciente">
-            <strong><?php echo htmlspecialchars($c['paciente']); ?></strong>
-            <span>ID: #<?php echo htmlspecialchars($c['paciente_id']); ?></span>
-          </div>
-
-          <div class="agenda-col motivo">
-            <?php echo htmlspecialchars($c['motivo_consulta'] ?: 'Consulta general'); ?>
-          </div>
-
-          <div class="agenda-col estado">
-            <span class="estado-badge">Confirmada</span>
-          </div>
+          <div class="agenda-col hora"><?php echo htmlspecialchars(substr($c['hora'], 0, 5)); ?></div>
+          <div class="agenda-col paciente"><strong><?php echo htmlspecialchars($c['paciente']); ?></strong><span>ID: #<?php echo htmlspecialchars($c['paciente_id']); ?></span></div>
+          <div class="agenda-col motivo"><?php echo htmlspecialchars($c['motivo_consulta'] ?: 'Consulta general'); ?></div>
+          <div class="agenda-col estado"><span class="estado-badge">Confirmada</span></div>
         </div>
       <?php endforeach; ?>
     </div>

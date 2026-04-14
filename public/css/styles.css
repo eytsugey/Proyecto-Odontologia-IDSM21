@@ -438,3 +438,139 @@ body{
   gap:10px;
   justify-content:center;
 }
+/* ===== HISTORIA CLINICA ===== */
+.panel-winforms{
+  background:#f3f4f6;
+  border:1px solid #d1d5db;
+  box-shadow:none;
+}
+
+.historia-form{
+  margin-top: 6px;
+}
+
+.wf-layout{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.wf-group{
+  border:1px solid #bfc7d1;
+  border-radius:8px;
+  background:#ffffff;
+  padding:18px 16px 16px;
+  position:relative;
+}
+
+.wf-group legend{
+  padding:0 8px;
+  font-size:14px;
+  font-weight:700;
+  color:#1f2937;
+}
+
+.wf-grid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap:14px 18px;
+}
+
+.wf-item{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.wf-span-2{
+  grid-column: 1 / -1;
+}
+
+.wf-item label{
+  font-size:13px;
+  font-weight:600;
+  color:#111827;
+}
+
+.wf-item input,
+.wf-item textarea,
+.wf-item select{
+  width:100%;
+  min-height:36px;
+  padding:7px 10px;
+  font-size:14px;
+  color:#111827;
+  background:#ffffff;
+  border:1px solid #aeb7c2;
+  border-radius:4px;
+  outline:none;
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+
+.wf-item textarea{
+  min-height:90px;
+  resize:vertical;
+}
+
+.wf-item input:focus,
+.wf-item textarea:focus,
+.wf-item select:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 3px rgba(37,99,235,.12);
+}
+
+.wf-checkline{
+  min-height:36px;
+  display:flex;
+  align-items:center;
+}
+
+.wf-check{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+  font-weight:600;
+  color:#111827;
+  margin:0;
+}
+
+.wf-check input[type="checkbox"]{
+  width:16px;
+  height:16px;
+  margin:0;
+  accent-color:#2563eb;
+}
+
+.wf-actions{
+  display:flex;
+  justify-content:flex-end;
+  padding-top:4px;
+}
+
+.wf-item input:disabled,
+.wf-item textarea:disabled,
+.wf-item select:disabled{
+  background:#eef1f4;
+  color:#6b7280;
+  border-color:#c7cfd8;
+  cursor:not-allowed;
+}
+
+@media (max-width: 900px){
+  .wf-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .wf-span-2{
+    grid-column:auto;
+  }
+
+  .wf-actions{
+    justify-content:stretch;
+  }
+
+  .wf-actions .btn{
+    width:100%;
+  }
+}

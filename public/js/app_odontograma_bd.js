@@ -3,6 +3,12 @@
   const numeroInput = document.getElementById("numeroDiente");
   const estadoInput = document.getElementById("estadoDiente");
   const descripcionInput = document.getElementById("descripcionDiente");
+  const tratamientoSugeridoInput = document.getElementById("tratamientoSugerido");
+  const ayudaCotizacion = document.getElementById("ayudaCotizacion");
+  const cotizacionDienteInput = document.getElementById("cotizacionDiente");
+  const cotizacionEstadoInput = document.getElementById("cotizacionEstado");
+  const cotizacionDescripcionInput = document.getElementById("cotizacionDescripcion");
+  const btnCotizarDiente = document.getElementById("btnCotizarDiente");
   const badgeTipo = document.getElementById("badgeTipoDenticion");
 
   if (!contenedor) return;
@@ -30,6 +36,15 @@
   let dienteSeleccionado = null;
   let datos = {};
 
+  const sugerenciasPorEstado = {
+    sano: { tratamiento: "", ayuda: "Selecciona un hallazgo clínico para habilitar una cotización rápida." },
+    caries: { tratamiento: "Resina / Restauración", ayuda: "Sugerencia rápida para resolver caries o una restauración sencilla." },
+    restaurado: { tratamiento: "Revisión de restauración", ayuda: "Útil cuando se requiere valorar o reemplazar una restauración existente." },
+    extraido: { tratamiento: "Prótesis / Implante", ayuda: "Puede cotizarse una solución restaurativa para la pieza ausente." },
+    fracturado: { tratamiento: "Corona / Reconstrucción", ayuda: "Recomendado cuando la pieza requiere protección o reconstrucción." },
+    endodoncia: { tratamiento: "Endodoncia", ayuda: "Permite cotizar el procedimiento endodóntico desde el hallazgo registrado." }
+  };
+
   function obtenerTipoDenticion(edad) {
     if (typeof edad !== "number" || Number.isNaN(edad)) return "permanente";
     if (edad <= 5) return "temporal";
@@ -46,6 +61,33 @@
 
   function clasePorEstado(estado) {
     return estadosPermitidos.includes(estado) ? estado : "sano";
+  }
+
+  function actualizarCotizacion() {
+    const estado = clasePorEstado(estadoInput?.value || "sano");
+    const sugerencia = sugerenciasPorEstado[estado] || sugerenciasPorEstado.sano;
+
+    if (tratamientoSugeridoInput) {
+      tratamientoSugeridoInput.value = sugerencia.tratamiento || "Sin cotización sugerida";
+    }
+
+    if (ayudaCotizacion) {
+      ayudaCotizacion.textContent = sugerencia.ayuda;
+    }
+
+    if (cotizacionDienteInput) {
+      cotizacionDienteInput.value = dienteSeleccionado || "";
+    }
+    if (cotizacionEstadoInput) {
+      cotizacionEstadoInput.value = estado;
+    }
+    if (cotizacionDescripcionInput) {
+      cotizacionDescripcionInput.value = descripcionInput?.value?.trim() || "";
+    }
+
+    if (btnCotizarDiente) {
+      btnCotizarDiente.disabled = !dienteSeleccionado || estado === "sano";
+    }
   }
 
   function crearDienteItem(numero) {
@@ -127,6 +169,7 @@
     estadoInput.value = clasePorEstado(info.estado);
     descripcionInput.value = info.descripcion || "";
     aplicarDatos();
+    actualizarCotizacion();
   }
 
   async function cargarDesdeBD() {
@@ -173,6 +216,7 @@
         descripcion: payload.descripcion
       };
       aplicarDatos();
+      actualizarCotizacion();
       alert("Diente guardado correctamente.");
     } catch (error) {
       console.error("Error al guardar:", error);
@@ -185,9 +229,19 @@
     numeroInput.value = "";
     estadoInput.value = "sano";
     descripcionInput.value = "";
+    actualizarCotizacion();
     cargarDesdeBD();
   };
 
+  if (estadoInput) {
+    estadoInput.addEventListener("change", actualizarCotizacion);
+  }
+
+  if (descripcionInput) {
+    descripcionInput.addEventListener("input", actualizarCotizacion);
+  }
+
   renderOdontograma();
+  actualizarCotizacion();
   cargarDesdeBD();
 })();
