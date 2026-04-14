@@ -2,13 +2,15 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+require_once __DIR__ . '/../api/config/app.php';
+require_once __DIR__ . '/../api/middleware/auth.php';
 
 if (!isset($titulo)) { $titulo = 'Sistema'; }
 if (!isset($subtitulo)) { $subtitulo = ''; }
 if (!isset($active)) { $active = ''; }
 if (!isset($extra_css) || !is_array($extra_css)) { $extra_css = []; }
 
-$rol = $_SESSION['rol'] ?? '';
+$rol = normalizarRol($_SESSION['rol'] ?? '');
 $nombre = $_SESSION['nombre'] ?? 'Usuario';
 $bodyClass = trim('app-layout ' . ($active ? 'page-' . preg_replace('/[^a-z0-9\-]+/i', '-', strtolower($active)) : ''));
 ?>
@@ -29,22 +31,39 @@ $bodyClass = trim('app-layout ' . ($active ? 'page-' . preg_replace('/[^a-z0-9\-
   <aside class="sidebar">
     <h2>🦷 DentalApp</h2>
     <nav>
-      <?php if ($rol === 'doctor'): ?>
-      
+      <?php if ($rol === 'admin'): ?>
+        <a class="<?php echo $active === 'admin' ? 'active' : ''; ?>" href="admin.php">Panel admin</a>
+        <a class="<?php echo $active === 'usuarios' ? 'active' : ''; ?>" href="usuarios.php">Usuarios</a>
+        <a class="<?php echo $active === 'pacientes' ? 'active' : ''; ?>" href="pacientes.php">Pacientes</a>
+        <a class="<?php echo $active === 'citas' ? 'active' : ''; ?>" href="citas.php">Citas</a>
+        <a class="<?php echo $active === 'doctor_agenda' ? 'active' : ''; ?>" href="doctor_agenda.php">Agenda doctor</a>
+        <a class="<?php echo $active === 'tratamientos' ? 'active' : ''; ?>" href="tratamientos.php">Tratamientos</a>
+        <a class="<?php echo $active === 'plan_tratamiento' ? 'active' : ''; ?>" href="plan_tratamiento.php">Plan por fases</a>
+        <a class="<?php echo $active === 'pagos' ? 'active' : ''; ?>" href="pagos.php">Pagos</a>
+        <a class="<?php echo $active === 'finanzas_paciente' ? 'active' : ''; ?>" href="finanzas_paciente.php">Estado financiero</a>
+        <a class="<?php echo $active === 'reportes' ? 'active' : ''; ?>" href="reportes.php">Reportes</a>
+        <a class="<?php echo $active === 'secretaria' ? 'active' : ''; ?>" href="secretaria.php">Panel secretaria</a>
+      <?php elseif ($rol === 'doctor'): ?>
         <a class="<?php echo $active === 'admin' ? 'active' : ''; ?>" href="admin.php">Panel doctor</a>
         <a class="<?php echo $active === 'pacientes' ? 'active' : ''; ?>" href="pacientes.php">Pacientes</a>
         <a class="<?php echo $active === 'citas' ? 'active' : ''; ?>" href="citas.php">Citas</a>
-          <a class="<?php echo $active === 'doctor_agenda' ? 'active' : ''; ?>" href="doctor_agenda.php">Agenda</a>
+        <a class="<?php echo $active === 'doctor_agenda' ? 'active' : ''; ?>" href="doctor_agenda.php">Agenda</a>
+        <a class="<?php echo $active === 'tratamientos' ? 'active' : ''; ?>" href="tratamientos.php">Tratamientos</a>
+        <a class="<?php echo $active === 'plan_tratamiento' ? 'active' : ''; ?>" href="plan_tratamiento.php">Plan por fases</a>
+        <a class="<?php echo $active === 'reportes' ? 'active' : ''; ?>" href="reportes.php">Reportes</a>
       <?php elseif ($rol === 'secretaria'): ?>
         <a class="<?php echo $active === 'secretaria' ? 'active' : ''; ?>" href="secretaria.php">Panel secretaria</a>
         <a class="<?php echo $active === 'pacientes' ? 'active' : ''; ?>" href="pacientes.php">Pacientes</a>
         <a class="<?php echo $active === 'citas' ? 'active' : ''; ?>" href="citas.php">Citas</a>
+        <a class="<?php echo $active === 'plan_tratamiento' ? 'active' : ''; ?>" href="plan_tratamiento.php">Plan por fases</a>
+        <a class="<?php echo $active === 'pagos' ? 'active' : ''; ?>" href="pagos.php">Pagos</a>
+        <a class="<?php echo $active === 'finanzas_paciente' ? 'active' : ''; ?>" href="finanzas_paciente.php">Estado financiero</a>
         <a class="<?php echo $active === 'agendar-cita' ? 'active' : ''; ?>" href="agendar-cita.php">Agendar cita</a>
       <?php else: ?>
-        <a href="../index.php">Inicio</a>
+        <a href="index.php">Inicio</a>
       <?php endif; ?>
 
-      <a href="../api/auth/logout.php">Cerrar sesión</a>
+      <a href="<?php echo htmlspecialchars(appApiUrl('auth/logout.php')); ?>">Cerrar sesión</a>
     </nav>
   </aside>
 

@@ -4,6 +4,10 @@ require_once __DIR__ . '/../api/config/database.php';
 require_once __DIR__ . '/../api/middleware/auth.php';
 requireLogin(['doctor', 'secretaria']);
 
+if (!($pdo instanceof PDO)) {
+    die('Error de conexión a la base de datos.');
+}
+
 $titulo = 'Pacientes';
 $subtitulo = 'Desde esta vista puedes registrar pacientes y abrir su historia clínica, odontograma y citas.';
 $active = 'pacientes';
@@ -59,7 +63,7 @@ include '_layout_top.php';
     <p>Registra los datos básicos del paciente para acceder rápidamente a su historia clínica, odontograma y control de citas.</p>
   </div>
 
-  <form action="../api/pacientes.php" method="POST">
+  <form action="<?php echo htmlspecialchars(appApiUrl('pacientes.php')); ?>" method="POST">
     <div class="form-grid">
       <div class="field field-wide">
         <label>Nombre</label>
@@ -156,6 +160,8 @@ include '_layout_top.php';
                   <a class="btn-secondary" href="historia.php?paciente_id=<?php echo (int)$p['id']; ?>">Historia clínica</a>
                   <a class="btn-secondary" href="odontograma.php?paciente_id=<?php echo (int)$p['id']; ?>">Odontograma</a>
                   <a class="btn-secondary" href="citas_paciente.php?paciente_id=<?php echo (int)$p['id']; ?>">Ver citas</a>
+                  <a class="btn-secondary" href="finanzas_paciente.php?paciente_id=<?php echo (int)$p['id']; ?>">Estado financiero</a>
+                  <a class="btn-secondary" href="plan_tratamiento.php?paciente_id=<?php echo (int)$p['id']; ?>">Plan por fases</a>
                 </div>
               </td>
             </tr>

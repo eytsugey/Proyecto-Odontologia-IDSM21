@@ -108,7 +108,7 @@ include '_layout_top.php';
 </td>
 
 <td>
-<a href="citas_paciente.php?paciente_id=<?php echo $c['paciente_id']; ?>">Editar</a> |
+<a href="citas_paciente.php?cita_id=<?php echo $c['id']; ?>">Editar</a> |
 <a href="secretaria.php?accion=confirmar&id=<?php echo $c['id']; ?>">Confirmar</a> |
 <a href="secretaria.php?accion=cancelar&id=<?php echo $c['id']; ?>">Cancelar</a>
 </td>
@@ -190,7 +190,7 @@ tabla.innerHTML += `
 <td>${cita.motivo_consulta ?? 'N/A'}</td>
 <td><span class="badge ${cita.estado}">${cita.estado}</span></td>
 <td>
-<a href="citas_paciente.php?paciente_id=${cita.paciente_id}">Editar</a> |
+<a href="citas_paciente.php?cita_id=${cita.id}">Editar</a> |
 <a href="secretaria.php?accion=confirmar&id=${cita.id}">Confirmar</a> |
 <a href="secretaria.php?accion=cancelar&id=${cita.id}">Cancelar</a>
 </td>
