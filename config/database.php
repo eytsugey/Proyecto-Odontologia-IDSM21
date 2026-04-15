@@ -1,12 +1,34 @@
 <?php
-$host = "localhost";
-$db   = "clinica_dental";
-$user = "root";
-$pass = "";
+require_once __DIR__ . '/app.php';
 
-$pdo = new PDO(
-    "mysql:host=$host;dbname=$db;charset=utf8mb4",
-    $user,
-    $pass,
-    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-);
+$host = 'localhost';
+$user = 'root';
+$pass = '';
+$port = '3306';
+$options = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+];
+
+$dbCandidates = array_unique(array_filter([
+    getenv('ODONTO_DB') ?: null,
+    'odontologia_db',
+    'odontologia',
+]));
+
+$lastError = null;
+$pdo = null;
+
+foreach ($dbCandidates as $db) {
+    try {
+        $pdo = new PDO("mysql:host=localhost;dbname=odontologia;charset=utf8mb4","root","");
+        break;
+    } catch (PDOException $e) {
+        $lastError = $e;
+    }
+}
+
+if (!$pdo) {
+    die('Error de conexión: ' . ($lastError ? $lastError->getMessage() : 'No fue posible conectar a la base de datos.'));
+}
+?>

@@ -1,40 +1,46 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 session_start();
-require '../config/database.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/app.php';
+require_once __DIR__ . '/../middleware/auth.php';
 
-header('Content-Type: application/json');
+$correo = trim($_POST['correo'] ?? '');
+$password = $_POST['password'] ?? '';
 
-$data = json_decode(file_get_contents("php://input"), true);
-
-$stmt = $pdo->prepare(
-    "SELECT id_usuario, nombre, password, rol
-     FROM usuarios
-     WHERE email=? AND activo=1"
-);
-$stmt->execute([$data['email']]);
-$usuario = $stmt->fetch();
-
-if ($usuario && password_verify($data['password'], $usuario['password'])) {
-
-    $_SESSION['usuario'] = [
-        'id' => $usuario['id_usuario'],
-        'nombre' => $usuario['nombre'],
-        'rol' => $usuario['rol']
-    ];
-
-    echo json_encode([
-        "success" => true,
-        "rol" => $usuario['rol']
-    ]);
-
-} else {
-
-    echo json_encode([
-        "success" => false,
-        "error" => "Correo o contraseña incorrectos"
-    ]);
+if ($correo === '' || $password === '') {
+    redirectPublic('login.php?error=1');
 }
 
+$stmt = $pdo->prepare('SELECT * FROM usuarios WHERE correo = ? LIMIT 1');
+$stmt->execute([$correo]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+$loginValido = false;
+
+if ($user && (int)($user['activo'] ?? 1) === 1) {
+    $hashGuardado = (string)($user['password'] ?? '');
+
+    if ($hashGuardado !== '' && password_verify($password, $hashGuardado)) {
+        $loginValido = true;
+    } elseif (hash_equals($hashGuardado, $password)) {
+        $loginValido = true;
+
+        try {
+            $nuevoHash = password_hash($password, PASSWORD_DEFAULT);
+            $upd = $pdo->prepare('UPDATE usuarios SET password = ? WHERE id = ?');
+            $upd->execute([$nuevoHash, (int)$user['id']]);
+            $user['password'] = $nuevoHash;
+        } catch (Throwable $e) {
+        }
+    }
+}
+
+if ($loginValido && $user) {
+    $_SESSION['usuario_id'] = (int)$user['id'];
+    $_SESSION['nombre'] = $user['nombre'];
+    $_SESSION['rol'] = normalizarRol($user['rol'] ?? '');
+    redirectByRole($_SESSION['rol']);
+}
+
+redirectPublic('login.php?error=1');
+?>
