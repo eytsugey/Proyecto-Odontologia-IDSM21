@@ -1,0 +1,65 @@
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 992px){
+  .layout{
+    grid-template-columns: 200px 1fr;
+  }
+
+  .cards{
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+
+  .field{
+    grid-column: span 6;
+  }
+
+  .diente{
+    width:45px;
+    height:45px;
+  }
+}
+
+@media (max-width: 768px){
+  .layout{
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar{
+    position: static;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar nav{
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .topbar{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .main{
+    padding:15px;
+  }
+
+  .cards,
+  .finance,
+  .form-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .field,
+  .field.field-wide{
+    grid-column: 1 / -1;
+  }
+
+  .diente{
+    width:40px;
+    height:40px;
+    font-size:10px;
+  }
+}

@@ -1,0 +1,277 @@
+.panel + .panel {
+  margin-top: 22px;
+}
+
+.form-citas {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+
+.form-citas .field,
+.form-cita-edit .field {
+  min-width: 0;
+}
+
+.panel-agenda {
+  overflow: hidden;
+}
+
+.citas-wrap {
+  overflow-x: auto;
+}
+
+.table-citas {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.table-citas th,
+.table-citas td {
+  padding: 14px 16px;
+  vertical-align: top;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table-citas th:nth-child(1),
+.table-citas td:nth-child(1) { width: 16%; }
+.table-citas th:nth-child(2),
+.table-citas td:nth-child(2) { width: 15%; }
+.table-citas th:nth-child(3),
+.table-citas td:nth-child(3) { width: 14%; }
+.table-citas th:nth-child(4),
+.table-citas td:nth-child(4) { width: 18%; }
+.table-citas th:nth-child(5),
+.table-citas td:nth-child(5) { width: 18%; }
+.table-citas th:nth-child(6),
+.table-citas td:nth-child(6) { width: 10%; }
+.table-citas th:nth-child(7),
+.table-citas td:nth-child(7) { width: 9%; }
+
+.cita-horario {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.25;
+}
+
+.cita-horario .fecha {
+  font-weight: 700;
+  color: var(--color-texto);
+}
+
+.cita-horario .hora {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.cita-motivo {
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.cita-cuenta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.35;
+}
+
+.cita-cuenta strong {
+  color: var(--color-texto);
+}
+
+.btn-cobrar-inline {
+  margin-top: 8px;
+  width: fit-content;
+}
+
+.estado-wrap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.cita-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cita-acciones .action-link,
+.cita-acciones button,
+.state-actions-grid button {
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-align: center;
+  line-height: 1.2;
+  white-space: normal;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.cita-acciones .action-link {
+  background: #eef2ff;
+  color: #1e3a8a;
+  border: 1px solid #c7d2fe;
+}
+
+.cita-vacia {
+  padding: 24px 16px;
+  color: var(--color-muted);
+}
+
+.cita-detail-toolbar {
+  margin-bottom: 18px;
+}
+
+.cita-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.card-lite {
+  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-label {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.split-panels {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 18px;
+}
+
+.panel-sub {
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 18px;
+  background: #fff;
+}
+
+.form-cita-edit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.state-actions-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.state-actions-grid form {
+  margin: 0;
+}
+
+.state-actions-grid button {
+  border: 0;
+  background: var(--color-sidebar);
+  color: #fff;
+  cursor: pointer;
+}
+
+.state-actions-grid .btn-danger {
+  background: #dc2626;
+}
+
+@media (max-width: 1100px) {
+  .table-citas {
+    min-width: 940px;
+  }
+
+  .cita-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .split-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 820px) {
+  .form-citas {
+    grid-template-columns: 1fr;
+  }
+
+  .field.span-3,
+  .field.span-6,
+  .field.span-9,
+  .field.span-12 {
+    grid-column: auto;
+  }
+
+  .citas-wrap {
+    overflow: visible;
+  }
+
+  .table-citas,
+  .table-citas thead,
+  .table-citas tbody,
+  .table-citas th,
+  .table-citas td,
+  .table-citas tr {
+    display: block;
+    width: 100%;
+  }
+
+  .table-citas thead {
+    display: none;
+  }
+
+  .table-citas tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .table-citas tr {
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .table-citas td {
+    border: 0;
+    padding: 10px 0;
+  }
+
+  .table-citas td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e3a8a;
+  }
+
+  .btn-cobrar-inline {
+    width: 100%;
+    text-align: center;
+  }
+
+  .cita-detail-grid,
+  .form-cita-edit {
+    grid-template-columns: 1fr;
+  }
+}

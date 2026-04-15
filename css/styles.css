@@ -1,0 +1,576 @@
+/* =========================
+   VARIABLES GLOBALES
+========================= */
+:root{
+  --color-fondo: #f4f7fb;
+  --color-texto: #0f172a;
+  --color-sidebar: #1e3a8a;
+  --color-sidebar-light: rgba(255,255,255,.10);
+  --color-card: #ffffff;
+  --color-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-hover: #f1f5f9;
+  --color-primary-soft: #eaf2ff;
+  --color-success-bg: #e9fbf0;
+  --color-success-text: #177245;
+  --color-error-bg: #fff1f1;
+  --color-error-text: #b42318;
+
+  --shadow: 0 10px 25px rgba(15,23,42,.06);
+  --shadow-soft: 0 6px 20px rgba(20, 54, 97, 0.08);
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 10px;
+  --transition: .25s ease;
+
+  /* Estados Odontograma */
+  --sano: #d1fae5;
+  --caries: #fecaca;
+  --restaurado: #fef3c7;
+  --extraido: #e5e7eb;
+  --fracturado: #fde68a;
+  --endodoncia: #c7d2fe;
+}
+
+/* RESET */
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Arial, Helvetica, sans-serif;
+}
+
+a{
+  color:inherit;
+  text-decoration:none;
+}
+
+body{
+  background:var(--color-fondo);
+  color:var(--color-texto);
+}
+
+/* =========================
+   LAYOUT
+========================= */
+.layout{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns: 260px 1fr;
+  align-items:start;
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+.sidebar{
+  position:sticky;
+  top:0;
+  height:100vh;
+  overflow-y:auto;
+  background:var(--color-sidebar);
+  color:#fff;
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.sidebar h2{
+  font-size:18px;
+  padding:10px 12px;
+  border-radius:var(--radius-md);
+  background:rgba(255,255,255,.08);
+}
+
+.sidebar nav{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:4px;
+}
+
+.sidebar nav a{
+  display:block;
+  padding:10px 12px;
+  border-radius:var(--radius-sm);
+  background:var(--color-sidebar-light);
+  color:#eaf1ff;
+  font-size:14px;
+}
+
+.sidebar nav a.active{
+  background:#fff;
+  color:var(--color-sidebar);
+  font-weight:700;
+}
+
+/* =========================
+   MAIN
+========================= */
+.main{
+  padding:24px 28px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+/* =========================
+   TOPBAR
+========================= */
+.topbar{
+  background:var(--color-card);
+  border-radius:var(--radius-lg);
+  padding:18px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 14px;
+  box-shadow:var(--shadow);
+}
+
+.topbar h1{
+  font-size:22px;
+}
+
+.topbar p{
+  margin-top:4px;
+  font-size:13px;
+  color:var(--color-muted);
+}
+
+.user{
+  padding:10px 14px;
+  border-radius:var(--radius-md);
+  background:var(--color-hover);
+  color:var(--color-texto);
+  font-weight:700;
+}
+
+/* =========================
+   COMPONENTES COMPARTIDOS
+========================= */
+.cards{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap:14px;
+}
+
+.card,
+.panel{
+  background:var(--color-card);
+  border-radius:var(--radius-lg);
+  padding:18px;
+  box-shadow:var(--shadow);
+}
+
+.card h3{
+  font-size:15px;
+  margin-bottom:8px;
+}
+
+.card p,
+.panel p{
+  font-size:13px;
+  color:var(--color-muted);
+  line-height:1.45;
+}
+
+.panel h2{
+  font-size:16px;
+  margin-bottom:14px;
+}
+
+.toolbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap: 12px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+
+.notice{
+  border-radius: var(--radius-md);
+  padding: 0.95rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.98rem;
+  border: 1px solid transparent;
+}
+
+.notice.success{
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-color: #b7ebc9;
+}
+
+.notice.error{
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  border-color: #f3b6b6;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1rem;
+}
+
+.field{
+  display:flex;
+  flex-direction:column;
+  gap: 0.45rem;
+  grid-column: span 4;
+}
+
+.field.field-wide{
+  grid-column: 1 / -1;
+}
+
+.field label{
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-texto);
+}
+
+.field input,
+.field select,
+.field textarea{
+  width:100%;
+  min-height: 2.9rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--color-texto);
+  font-size: 1rem;
+  outline:none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.field textarea{
+  resize: vertical;
+  min-height: 7rem;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.search-form input:focus{
+  border-color:#2fb7c8;
+  box-shadow:0 0 0 .25rem rgba(47,183,200,.15);
+}
+
+.btn,
+.btn-secondary,
+.btn-primary,
+.btn-letter{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: .45rem;
+  min-height: 2.8rem;
+  padding: .75rem 1rem;
+  border-radius: 999px;
+  border: none;
+  cursor:pointer;
+  font-weight:600;
+  font-size:.96rem;
+  transition: transform var(--transition), box-shadow var(--transition), background var(--transition), color var(--transition);
+}
+
+.btn,
+.btn-primary{
+  background: linear-gradient(135deg, var(--color-sidebar), #2d6cdf);
+  color:#fff;
+  box-shadow: 0 8px 18px rgba(31,79,163,.22);
+}
+
+.btn:hover,
+.btn-primary:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgba(31,79,163,.28);
+}
+
+.btn-secondary{
+  background: var(--color-primary-soft);
+  color: var(--color-sidebar);
+  border: 1px solid #cfe0fb;
+}
+
+.btn-secondary:hover,
+.btn-letter:hover,
+.btn-letter.active{
+  background: var(--color-sidebar);
+  color: #fff;
+}
+
+.actions{
+  display:flex;
+  gap:.5rem;
+  flex-wrap:wrap;
+}
+
+.search-tools{
+  display:grid;
+  gap:.9rem;
+}
+
+.search-form{
+  display:flex;
+  gap:.7rem;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.search-form input{
+  flex: 1 1 17rem;
+  min-height:2.9rem;
+  padding:.75rem .95rem;
+  border:1px solid var(--color-border);
+  border-radius:999px;
+  background:#fff;
+  outline:none;
+  font-size:.98rem;
+  transition:border-color var(--transition), box-shadow var(--transition);
+}
+
+.table-wrap{
+  overflow-x:auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.table{
+  width:100%;
+  border-collapse:collapse;
+  background:#fff;
+}
+
+.table thead th{
+  background: linear-gradient(180deg, #eff6ff 0%, #e6f0fb 100%);
+  color: var(--color-sidebar);
+  font-size:.95rem;
+  font-weight:700;
+  text-align:left;
+  padding:1rem .9rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table tbody td{
+  padding:.95rem .9rem;
+  border-bottom:1px solid #edf3f9;
+  vertical-align:top;
+}
+
+.table tbody tr:hover{
+  background:#f7fbff;
+}
+
+.table tbody tr:last-child td{
+  border-bottom:none;
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width: 6.5rem;
+  padding: .42rem .7rem;
+  border-radius:999px;
+  font-size:.88rem;
+  font-weight:700;
+  text-transform: capitalize;
+}
+
+.badge.pendiente{ background:#fef3c7; color:#92400e; }
+.badge.confirmada{ background:#dcfce7; color:#166534; }
+.badge.cancelada{ background:#fee2e2; color:#991b1b; }
+
+.empty-row td{
+  text-align:center;
+  color:var(--color-muted);
+  padding:1.2rem;
+}
+
+/* =========================
+   FINANCE
+========================= */
+.finance{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:12px;
+}
+
+.finance > div{
+  background:#f8fafc;
+  border:1px solid var(--color-border);
+  border-radius:14px;
+  padding:14px;
+  text-align:center;
+}
+
+.finance strong{
+  display:block;
+  font-size:20px;
+  color:var(--color-sidebar);
+  margin-bottom:4px;
+}
+
+.finance span{
+  font-size:12px;
+  color:var(--color-muted);
+}
+
+/* =========================
+   ODONTOGRAMA BASE
+========================= */
+.odontograma-container{
+  display:grid;
+  gap:40px;
+  justify-content:center;
+  margin-top:20px;
+}
+
+.arcada{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+}
+/* ===== HISTORIA CLINICA ===== */
+.panel-winforms{
+  background:#f3f4f6;
+  border:1px solid #d1d5db;
+  box-shadow:none;
+}
+
+.historia-form{
+  margin-top: 6px;
+}
+
+.wf-layout{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.wf-group{
+  border:1px solid #bfc7d1;
+  border-radius:8px;
+  background:#ffffff;
+  padding:18px 16px 16px;
+  position:relative;
+}
+
+.wf-group legend{
+  padding:0 8px;
+  font-size:14px;
+  font-weight:700;
+  color:#1f2937;
+}
+
+.wf-grid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap:14px 18px;
+}
+
+.wf-item{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.wf-span-2{
+  grid-column: 1 / -1;
+}
+
+.wf-item label{
+  font-size:13px;
+  font-weight:600;
+  color:#111827;
+}
+
+.wf-item input,
+.wf-item textarea,
+.wf-item select{
+  width:100%;
+  min-height:36px;
+  padding:7px 10px;
+  font-size:14px;
+  color:#111827;
+  background:#ffffff;
+  border:1px solid #aeb7c2;
+  border-radius:4px;
+  outline:none;
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+
+.wf-item textarea{
+  min-height:90px;
+  resize:vertical;
+}
+
+.wf-item input:focus,
+.wf-item textarea:focus,
+.wf-item select:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 3px rgba(37,99,235,.12);
+}
+
+.wf-checkline{
+  min-height:36px;
+  display:flex;
+  align-items:center;
+}
+
+.wf-check{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+  font-weight:600;
+  color:#111827;
+  margin:0;
+}
+
+.wf-check input[type="checkbox"]{
+  width:16px;
+  height:16px;
+  margin:0;
+  accent-color:#2563eb;
+}
+
+.wf-actions{
+  display:flex;
+  justify-content:flex-end;
+  padding-top:4px;
+}
+
+.wf-item input:disabled,
+.wf-item textarea:disabled,
+.wf-item select:disabled{
+  background:#eef1f4;
+  color:#6b7280;
+  border-color:#c7cfd8;
+  cursor:not-allowed;
+}
+
+@media (max-width: 900px){
+  .wf-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .wf-span-2{
+    grid-column:auto;
+  }
+
+  .wf-actions{
+    justify-content:stretch;
+  }
+
+  .wf-actions .btn{
+    width:100%;
+  }
+}

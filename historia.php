@@ -1,74 +1,438 @@
 <?php
 session_start();
-require_once __DIR__ . '/config/database.php';
-require_once __DIR__ . '/config/app.php';
-require_once __DIR__ . '/middleware/auth.php';
+require_once __DIR__ . '/../api/config/database.php';
+require_once __DIR__ . '/../api/middleware/auth.php';
 requireLogin(['doctor', 'secretaria']);
 
-function boolPost(string $name): int {
-    return isset($_POST[$name]) ? 1 : 0;
+$pacienteId = (int)($_GET['paciente_id'] ?? 0);
+if (!$pacienteId) {
+    header('Location: pacientes.php');
+    exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $pacienteId = (int)($_POST['paciente_id'] ?? 0);
+$stmt = $pdo->prepare('SELECT * FROM pacientes WHERE id = ? LIMIT 1');
+$stmt->execute([$pacienteId]);
+$paciente = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($pacienteId <= 0) {
-        redirectPublic('pacientes.php?error=1');
-    }
-
-    $exists = $pdo->prepare('SELECT id FROM historias_clinicas WHERE paciente_id = ? LIMIT 1');
-    $exists->execute([$pacienteId]);
-    $row = $exists->fetch(PDO::FETCH_ASSOC);
-
-    $data = [
-        boolPost('alergico_med_comida'), trim($_POST['cual_alergia'] ?? ''),
-        boolPost('intervencion'), trim($_POST['cual_intervencion'] ?? ''),
-        boolPost('reac_anestesia'), trim($_POST['cual_reaccion'] ?? ''),
-        boolPost('coagulacion_sang'), boolPost('diabetes'), trim($_POST['med_diabetes'] ?? ''),
-        boolPost('pres_alta'), trim($_POST['med_pres_alta'] ?? ''),
-        boolPost('pres_baja'), trim($_POST['med_pres_baja'] ?? ''),
-        boolPost('enf_venereas'), trim($_POST['cuales_enf_ven'] ?? ''),
-        boolPost('hepatitis'), trim($_POST['tipo_hepatitis'] ?? ''),
-        boolPost('asma'), boolPost('enfermedad'), trim($_POST['cuales_enfermedad'] ?? ''),
-        boolPost('drogas'), trim($_POST['cuales_drogas'] ?? ''),
-        boolPost('toma_med'), trim($_POST['para_que_med'] ?? ''),
-        boolPost('embarazo'), trim($_POST['mes_embarazo'] ?? ''),
-        boolPost('fuma'), boolPost('toma'), boolPost('farmaco_dep'), trim($_POST['cuales_habitos'] ?? ''),
-        trim($_POST['motivo_visita'] ?? ''), boolPost('primera_vez'),
-        ($_POST['ultima_visita'] ?? '') !== '' ? $_POST['ultima_visita'] : null,
-        boolPost('dolor_boca'), trim($_POST['tipo'] ?? ''), trim($_POST['tipo_dientes'] ?? ''),
-        trim($_POST['ta'] ?? ''), trim($_POST['pulso'] ?? ''), trim($_POST['oximetria'] ?? ''),
-        trim($_POST['glucosa'] ?? ''), trim($_POST['diagnostico'] ?? ''),
-    ];
-
-    if ($row) {
-        $sql = 'UPDATE historias_clinicas SET
-            alergico_med_comida = ?, cual_alergia = ?, intervencion = ?, cual_intervencion = ?, reac_anestesia = ?, cual_reaccion = ?,
-            coagulacion_sang = ?, diabetes = ?, med_diabetes = ?, pres_alta = ?, med_pres_alta = ?, pres_baja = ?, med_pres_baja = ?,
-            enf_venereas = ?, cuales_enf_ven = ?, hepatitis = ?, tipo_hepatitis = ?, asma = ?, enfermedad = ?, cuales_enfermedad = ?,
-            drogas = ?, cuales_drogas = ?, toma_med = ?, para_que_med = ?, embarazo = ?, mes_embarazo = ?, fuma = ?, toma = ?,
-            farmaco_dep = ?, cuales_habitos = ?, motivo_visita = ?, primera_vez = ?, ultima_visita = ?, dolor_boca = ?, tipo = ?,
-            tipo_dientes = ?, ta = ?, pulso = ?, oximetria = ?, glucosa = ?, diagnostico = ? WHERE paciente_id = ?';
-        $data[] = $pacienteId;
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($data);
-    } else {
-        $sql = 'INSERT INTO historias_clinicas (
-            alergico_med_comida, cual_alergia, intervencion, cual_intervencion, reac_anestesia, cual_reaccion,
-            coagulacion_sang, diabetes, med_diabetes, pres_alta, med_pres_alta, pres_baja, med_pres_baja,
-            enf_venereas, cuales_enf_ven, hepatitis, tipo_hepatitis, asma, enfermedad, cuales_enfermedad,
-            drogas, cuales_drogas, toma_med, para_que_med, embarazo, mes_embarazo, fuma, toma, farmaco_dep,
-            cuales_habitos, motivo_visita, primera_vez, ultima_visita, dolor_boca, tipo, tipo_dientes, ta,
-            pulso, oximetria, glucosa, diagnostico, paciente_id
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
-        $data[] = $pacienteId;
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($data);
-    }
-
-    redirectPublic('historia.php?paciente_id=' . $pacienteId . '&ok=1');
+if (!$paciente) {
+    header('Location: pacientes.php');
+    exit;
 }
 
-http_response_code(405);
-echo 'Método no permitido';
+$stmt = $pdo->prepare('SELECT * FROM historias_clinicas WHERE paciente_id = ? LIMIT 1');
+$stmt->execute([$pacienteId]);
+$historia = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+$titulo = 'Historia clínica';
+$subtitulo = 'Registro clínico de ' . $paciente['nombre'];
+$active = 'pacientes';
+$ok = isset($_GET['ok']);
+
+function checkedField(array $historia, string $campo): string {
+    return !empty($historia[$campo]) ? 'checked' : '';
+}
+
+function valueField(array $historia, string $campo): string {
+    return htmlspecialchars($historia[$campo] ?? '');
+}
+
+function disabledField(array $historia, string $campo): string {
+    return empty($historia[$campo]) ? 'disabled' : '';
+}
+
+include '_layout_top.php';
 ?>
+
+<?php if ($ok): ?>
+<div class="notice success">Historia clínica guardada.</div>
+<?php endif; ?>
+
+<section class="panel panel-winforms">
+  <div class="toolbar">
+    <h2><?php echo htmlspecialchars($paciente['nombre']); ?></h2>
+    <a class="btn-secondary" href="pacientes.php">Volver a pacientes</a>
+  </div>
+
+  <form action="../api/historia.php" method="POST" class="historia-form">
+    <input type="hidden" name="paciente_id" value="<?php echo (int)$pacienteId; ?>">
+
+    <div class="wf-layout">
+
+      <fieldset class="wf-group">
+        <legend>Antecedentes médicos</legend>
+
+        <div class="wf-grid">
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="alergico_med_comida" <?php echo checkedField($historia, 'alergico_med_comida'); ?>>
+                <span>Alérgico a medicamentos o comida</span>
+              </label>
+            </div>
+            <label>¿Cuál alergia?</label>
+            <input
+              type="text"
+              name="cual_alergia"
+              data-toggle="alergico_med_comida"
+              value="<?php echo valueField($historia, 'cual_alergia'); ?>"
+              <?php echo disabledField($historia, 'alergico_med_comida'); ?>
+            >
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="intervencion" <?php echo checkedField($historia, 'intervencion'); ?>>
+                <span>Intervención quirúrgica</span>
+              </label>
+            </div>
+            <label>¿Cuál intervención?</label>
+            <input
+              type="text"
+              name="cual_intervencion"
+              data-toggle="intervencion"
+              value="<?php echo valueField($historia, 'cual_intervencion'); ?>"
+              <?php echo disabledField($historia, 'intervencion'); ?>
+            >
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="reac_anestesia" <?php echo checkedField($historia, 'reac_anestesia'); ?>>
+                <span>Reacción a anestesia</span>
+              </label>
+            </div>
+            <label>¿Cuál reacción?</label>
+            <input
+              type="text"
+              name="cual_reaccion"
+              data-toggle="reac_anestesia"
+              value="<?php echo valueField($historia, 'cual_reaccion'); ?>"
+              <?php echo disabledField($historia, 'reac_anestesia'); ?>
+            >
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="coagulacion_sang" <?php echo checkedField($historia, 'coagulacion_sang'); ?>>
+                <span>Coagulación sanguínea</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="diabetes" <?php echo checkedField($historia, 'diabetes'); ?>>
+                <span>Diabetes</span>
+              </label>
+            </div>
+            <label>Medicamento para diabetes</label>
+            <input
+              type="text"
+              name="med_diabetes"
+              data-toggle="diabetes"
+              value="<?php echo valueField($historia, 'med_diabetes'); ?>"
+              <?php echo disabledField($historia, 'diabetes'); ?>
+            >
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="pres_alta" <?php echo checkedField($historia, 'pres_alta'); ?>>
+                <span>Presión alta</span>
+              </label>
+            </div>
+            <label>Medicamento para presión alta</label>
+            <input
+              type="text"
+              name="med_pres_alta"
+              data-toggle="pres_alta"
+              value="<?php echo valueField($historia, 'med_pres_alta'); ?>"
+              <?php echo disabledField($historia, 'pres_alta'); ?>
+            >
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="pres_baja" <?php echo checkedField($historia, 'pres_baja'); ?>>
+                <span>Presión baja</span>
+              </label>
+            </div>
+            <label>Medicamento para presión baja</label>
+            <input
+              type="text"
+              name="med_pres_baja"
+              data-toggle="pres_baja"
+              value="<?php echo valueField($historia, 'med_pres_baja'); ?>"
+              <?php echo disabledField($historia, 'pres_baja'); ?>
+            >
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="enf_venereas" <?php echo checkedField($historia, 'enf_venereas'); ?>>
+                <span>Enfermedades venéreas</span>
+              </label>
+            </div>
+            <label>¿Cuáles?</label>
+            <input
+              type="text"
+              name="cuales_enf_ven"
+              data-toggle="enf_venereas"
+              value="<?php echo valueField($historia, 'cuales_enf_ven'); ?>"
+              <?php echo disabledField($historia, 'enf_venereas'); ?>
+            >
+          </div>
+
+          <div class="wf-item2">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="hepatitis" <?php echo checkedField($historia, 'hepatitis'); ?>>
+                <span>Hepatitis</span>
+              </label>
+            </div>
+            <label>Tipo de hepatitis</label>
+            <input
+              type="text"
+              name="tipo_hepatitis"
+              data-toggle="hepatitis"
+              value="<?php echo valueField($historia, 'tipo_hepatitis'); ?>"
+              <?php echo disabledField($historia, 'hepatitis'); ?>
+            >
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="asma" <?php echo checkedField($historia, 'asma'); ?>>
+                <span>Asma</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="enfermedad" <?php echo checkedField($historia, 'enfermedad'); ?>>
+                <span>Otra enfermedad</span>
+              </label>
+            </div>
+            <label>¿Cuál enfermedad?</label>
+            <input
+              type="text"
+              name="cuales_enfermedad"
+              data-toggle="enfermedad"
+              value="<?php echo valueField($historia, 'cuales_enfermedad'); ?>"
+              <?php echo disabledField($historia, 'enfermedad'); ?>
+            >
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="drogas" <?php echo checkedField($historia, 'drogas'); ?>>
+                <span>Consume drogas</span>
+              </label>
+            </div>
+            <label>¿Cuáles drogas?</label>
+            <input
+              type="text"
+              name="cuales_drogas"
+              data-toggle="drogas"
+              value="<?php echo valueField($historia, 'cuales_drogas'); ?>"
+              <?php echo disabledField($historia, 'drogas'); ?>
+            >
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="toma_med" <?php echo checkedField($historia, 'toma_med'); ?>>
+                <span>Toma medicamentos</span>
+              </label>
+            </div>
+            <label>¿Para qué medicamento?</label>
+            <input
+              type="text"
+              name="para_que_med"
+              data-toggle="toma_med"
+              value="<?php echo valueField($historia, 'para_que_med'); ?>"
+              <?php echo disabledField($historia, 'toma_med'); ?>
+            >
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="embarazo" <?php echo checkedField($historia, 'embarazo'); ?>>
+                <span>Embarazo</span>
+              </label>
+            </div>
+            <label>Mes de embarazo</label>
+            <input
+              type="text"
+              name="mes_embarazo"
+              data-toggle="embarazo"
+              value="<?php echo valueField($historia, 'mes_embarazo'); ?>"
+              <?php echo disabledField($historia, 'embarazo'); ?>
+            >
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="wf-group">
+        <legend>Hábitos</legend>
+
+        <div class="wf-grid">
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="fuma" <?php echo checkedField($historia, 'fuma'); ?>>
+                <span>Fuma</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="toma" <?php echo checkedField($historia, 'toma'); ?>>
+                <span>Toma alcohol</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="farmaco_dep" <?php echo checkedField($historia, 'farmaco_dep'); ?>>
+                <span>Fármaco dependencia</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="wf-item wf-span-2">
+            <label>¿Cuáles hábitos?</label>
+            <input type="text" name="cuales_habitos" value="<?php echo valueField($historia, 'cuales_habitos'); ?>">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="wf-group">
+        <legend>Información general</legend>
+
+        <div class="wf-grid">
+          <div class="wf-item wf-span-2">
+            <label>Motivo de visita</label>
+            <textarea name="motivo_visita" rows="3"><?php echo valueField($historia, 'motivo_visita'); ?></textarea>
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="primera_vez" <?php echo checkedField($historia, 'primera_vez'); ?>>
+                <span>Primera vez</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="wf-item">
+            <label>Última visita</label>
+            <input type="date" name="ultima_visita" value="<?php echo valueField($historia, 'ultima_visita'); ?>">
+          </div>
+
+          <div class="wf-item">
+            <div class="wf-checkline">
+              <label class="wf-check">
+                <input type="checkbox" name="dolor_boca" <?php echo checkedField($historia, 'dolor_boca'); ?>>
+                <span>Dolor en boca</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="wf-item">
+            <label>Tipo</label>
+            <input type="text" name="tipo" value="<?php echo valueField($historia, 'tipo'); ?>">
+          </div>
+
+          <div class="wf-item">
+            <label>Tipo de dientes</label>
+            <input type="text" name="tipo_dientes" value="<?php echo valueField($historia, 'tipo_dientes'); ?>">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="wf-group">
+        <legend>Signos vitales y diagnóstico</legend>
+
+        <div class="wf-grid">
+          <div class="wf-item">
+            <label>TA</label>
+            <input type="text" name="ta" value="<?php echo valueField($historia, 'ta'); ?>">
+          </div>
+
+          <div class="wf-item">
+            <label>Pulso (lpm)</label>
+            <input type="text" name="pulso" value="<?php echo valueField($historia, 'pulso'); ?>">
+          </div>
+
+          <div class="wf-item">
+            <label>Oximetría (%)</label>
+            <input type="text" name="oximetria" value="<?php echo valueField($historia, 'oximetria'); ?>">
+          </div>
+
+          <div class="wf-item">
+            <label>Glucosa</label>
+            <input type="text" name="glucosa" value="<?php echo valueField($historia, 'glucosa'); ?>">
+          </div>
+
+          <div class="wf-item wf-span-2">
+            <label>Diagnóstico</label>
+            <textarea name="diagnostico" rows="5"><?php echo valueField($historia, 'diagnostico'); ?></textarea>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="wf-actions">
+        <button class="btn" type="submit">Guardar historia clínica</button>
+      </div>
+    </div>
+  </form>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const toggledFields = document.querySelectorAll('[data-toggle]');
+
+  function updateFieldState(input) {
+    const checkboxName = input.getAttribute('data-toggle');
+    const checkbox = document.querySelector('input[type="checkbox"][name="' + checkboxName + '"]');
+    if (!checkbox) return;
+
+    input.disabled = !checkbox.checked;
+    if (!checkbox.checked) {
+      input.value = '';
+    }
+  }
+
+  toggledFields.forEach(function (input) {
+    updateFieldState(input);
+    const checkboxName = input.getAttribute('data-toggle');
+    const checkbox = document.querySelector('input[type="checkbox"][name="' + checkboxName + '"]');
+
+    if (checkbox) {
+      checkbox.addEventListener('change', function () {
+        updateFieldState(input);
+      });
+    }
+  });
+});
+</script>
+
+<?php include '_layout_bottom.php'; ?>
