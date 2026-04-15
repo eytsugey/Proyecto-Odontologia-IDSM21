@@ -137,3 +137,15 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+/vendor/
+/api/config/google_token.json
+/api/config/google_calendar.php
+
+/public/test_google_token.php
+/public/test_google_event.php
+/public/test_google_service.php
+/public/test_google_calendars.php
+
+/public/google_login.php
+/public/google_callback.php
