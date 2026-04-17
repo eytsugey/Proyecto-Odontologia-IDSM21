@@ -1,6 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../config/app.php';
 session_destroy();
-header('Location: /Proyecto-Odontologia-IDSM21/public/login.php');
-exit;
+redirectPublic('login.php');
 ?>

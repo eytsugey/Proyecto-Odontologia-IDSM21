@@ -1,0 +1,163 @@
+.plan-shell{
+  display:grid;
+  gap:20px;
+}
+
+.plan-summary-cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:14px;
+}
+
+.plan-summary-cards .card p{
+  margin:0;
+}
+
+.plan-actions{
+  display:grid;
+  gap:16px;
+}
+
+.plan-table-wrap{
+  overflow-x:auto;
+}
+
+.plan-table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+.plan-table th,
+.plan-table td{
+  padding:14px 16px;
+  text-align:left;
+  vertical-align:top;
+  border-bottom:1px solid var(--color-border);
+}
+
+.plan-table th:nth-child(1),
+.plan-table td:nth-child(1){ width:27%; }
+.plan-table th:nth-child(2),
+.plan-table td:nth-child(2){ width:28%; }
+.plan-table th:nth-child(3),
+.plan-table td:nth-child(3){ width:13%; }
+.plan-table th:nth-child(4),
+.plan-table td:nth-child(4){ width:12%; }
+.plan-table th:nth-child(5),
+.plan-table td:nth-child(5){ width:20%; }
+
+.plan-treatment-name{
+  display:grid;
+  gap:6px;
+}
+
+.plan-treatment-name strong{
+  display:block;
+}
+
+.plan-treatment-meta,
+.plan-treatment-notes{
+  display:grid;
+  gap:6px;
+  font-size:14px;
+  color:var(--color-muted);
+  line-height:1.35;
+}
+
+.plan-actions-cell{
+  min-width:0;
+}
+
+.plan-item-form{
+  display:grid;
+  gap:8px;
+}
+
+.plan-item-form .row{
+  display:grid;
+  grid-template-columns:100px 1fr;
+  gap:8px;
+}
+
+.plan-item-form .row.single{
+  grid-template-columns:1fr;
+}
+
+.plan-item-form input,
+.plan-item-form select,
+.plan-item-form button,
+.plan-delete-form button{
+  width:100%;
+}
+
+.plan-delete-form{
+  margin-top:8px;
+}
+
+.plan-delete-form,
+.plan-item-form,
+.plan-item-form .row{
+  min-width:0;
+}
+
+.plan-empty{
+  padding:24px 12px;
+  color:var(--color-muted);
+}
+
+@media (max-width: 980px){
+  .plan-table{
+    min-width:860px;
+  }
+}
+
+@media (max-width: 720px){
+  .plan-table,
+  .plan-table thead,
+  .plan-table tbody,
+  .plan-table th,
+  .plan-table td,
+  .plan-table tr{
+    display:block;
+    width:100%;
+  }
+
+  .plan-table thead{
+    display:none;
+  }
+
+  .plan-table tbody{
+    display:grid;
+    gap:14px;
+  }
+
+  .plan-table tr{
+    border:1px solid var(--color-border);
+    border-radius:14px;
+    padding:12px;
+    background:#fff;
+  }
+
+  .plan-table td{
+    border-bottom:none;
+    padding:10px 0;
+  }
+
+  .plan-table td::before{
+    content:attr(data-label);
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    color:#1e3a8a;
+    margin-bottom:6px;
+  }
+
+  .plan-table{
+    min-width:0;
+  }
+
+  .plan-item-form .row{
+    grid-template-columns:1fr;
+  }
+}
