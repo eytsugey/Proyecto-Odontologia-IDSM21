@@ -104,4 +104,27 @@ CREATE TABLE IF NOT EXISTS plan_tratamiento_items (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
--- Si la tabla planes_tratamiento ya existía sin la columna tipo, el sistema la agrega automáticamente al entrar al módulo.
+-- Si la tabla pla
+CREATE TABLE IF NOT EXISTS historia_tratamientos_realizados (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    paciente_id BIGINT NOT NULL,
+    plan_id BIGINT NULL,
+    plan_item_id BIGINT NOT NULL,
+    tratamiento_id BIGINT NOT NULL,
+    tratamiento_nombre VARCHAR(180) NOT NULL,
+    cantidad INT NOT NULL DEFAULT 1,
+    precio_unitario DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    notas TEXT NULL,
+    fecha_realizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    registrado_por INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_htr_plan_item (plan_item_id),
+    INDEX idx_htr_paciente (paciente_id),
+    INDEX idx_htr_tratamiento (tratamiento_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS historia_tratamientos_realizados (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+ 

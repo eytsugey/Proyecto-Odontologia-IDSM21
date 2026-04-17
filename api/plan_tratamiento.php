@@ -186,7 +186,9 @@ if ($action === 'agregar_item') {
     $subtotal = ((float)$precio) * $cantidad;
     $stmt = $pdo->prepare('INSERT INTO plan_tratamiento_items (plan_id, fase_id, tratamiento_id, cantidad, precio_unitario, subtotal, estado, notas) VALUES (?,?,?,?,?,?,?,?)');
     $stmt->execute([$planId, $faseId > 0 ? $faseId : null, $tratamientoId, $cantidad, $precio, $subtotal, $estado !== '' ? $estado : 'pendiente', $notas !== '' ? $notas : null]);
+    $itemIdNuevo = (int)$pdo->lastInsertId();
     pmRecalcularPlanTotal($pdo, $planId);
+    pmSincronizarTratamientoRealizadoHistoria($pdo, $itemIdNuevo, (int)($_SESSION['usuario_id'] ?? 0) ?: null);
     pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'ok' => 'item']);
 }
 
@@ -212,6 +214,7 @@ if ($action === 'actualizar_item') {
     $stmt = $pdo->prepare('UPDATE plan_tratamiento_items SET fase_id = ?, cantidad = ?, subtotal = ?, estado = ?, notas = ? WHERE id = ? AND plan_id = ?');
     $stmt->execute([$faseId > 0 ? $faseId : null, $cantidad, $subtotal, $estado !== '' ? $estado : 'pendiente', $notas !== '' ? $notas : null, $itemId, $planId]);
     pmRecalcularPlanTotal($pdo, $planId);
+    pmSincronizarTratamientoRealizadoHistoria($pdo, $itemId, (int)($_SESSION['usuario_id'] ?? 0) ?: null);
     pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'ok' => 'item_editado']);
 }
 
@@ -221,6 +224,7 @@ if ($action === 'eliminar_item') {
         pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'error' => 'item']);
     }
 
+    pmEliminarTratamientoRealizadoHistoria($pdo, $itemId);
     $stmt = $pdo->prepare('DELETE FROM plan_tratamiento_items WHERE id = ? AND plan_id = ?');
     $stmt->execute([$itemId, $planId]);
     pmRecalcularPlanTotal($pdo, $planId);
