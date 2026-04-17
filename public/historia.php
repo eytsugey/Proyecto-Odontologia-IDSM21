@@ -2,7 +2,9 @@
 session_start();
 require_once __DIR__ . '/../api/config/database.php';
 require_once __DIR__ . '/../api/middleware/auth.php';
+require_once __DIR__ . '/../api/helpers/professional_modules.php';
 requireLogin(['doctor', 'secretaria']);
+ensureProfessionalModules($pdo);
 
 $pacienteId = (int)($_GET['paciente_id'] ?? 0);
 if (!$pacienteId) {
@@ -22,6 +24,7 @@ if (!$paciente) {
 $stmt = $pdo->prepare('SELECT * FROM historias_clinicas WHERE paciente_id = ? LIMIT 1');
 $stmt->execute([$pacienteId]);
 $historia = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+$tratamientosRealizados = pmTratamientosRealizadosHistoriaPaciente($pdo, $pacienteId);
 
 $titulo = 'Historia clínica';
 $subtitulo = 'Registro clínico de ' . $paciente['nombre'];
@@ -404,6 +407,55 @@ include '_layout_top.php';
       </div>
     </div>
   </form>
+</section>
+
+
+<section class="panel panel-winforms">
+  <div class="toolbar">
+    <h2>Tratamientos realizados</h2>
+    <span class="muted">Los tratamientos marcados como realizados desde el plan del paciente aparecen aquí.</span>
+  </div>
+
+  <?php if (empty($tratamientosRealizados)): ?>
+    <p class="muted">Aún no hay tratamientos realizados registrados en la historia clínica.</p>
+  <?php else: ?>
+    <div style="overflow-x:auto;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Tratamiento</th>
+            <th>Detalle</th>
+            <th>Costo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($tratamientosRealizados as $tratamientoRealizado): ?>
+            <tr>
+              <td>
+                <?php
+                  $fechaRealizacion = $tratamientoRealizado['fecha_realizacion'] ?? '';
+                  echo htmlspecialchars($fechaRealizacion !== '' ? date('Y-m-d H:i', strtotime($fechaRealizacion)) : '');
+                ?>
+              </td>
+              <td><?php echo htmlspecialchars($tratamientoRealizado['tratamiento_nombre'] ?? ''); ?></td>
+              <td>
+                Cantidad: <?php echo (int)($tratamientoRealizado['cantidad'] ?? 0); ?>
+                <?php if (!empty($tratamientoRealizado['notas'])): ?>
+                  <br>Notas: <?php echo htmlspecialchars($tratamientoRealizado['notas']); ?>
+                <?php endif; ?>
+              </td>
+              <td>
+                Unitario: <?php echo htmlspecialchars(pmFormatoMoneda((float)($tratamientoRealizado['precio_unitario'] ?? 0))); ?>
+                <br>
+                Total: <?php echo htmlspecialchars(pmFormatoMoneda((float)($tratamientoRealizado['subtotal'] ?? 0))); ?>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  <?php endif; ?>
 </section>
 
 <script>
