@@ -4,6 +4,7 @@ require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/config/app.php';
 require_once __DIR__ . '/helpers/schema.php';
 require_once __DIR__ . '/helpers/professional_modules.php';
+require_once __DIR__ . '/helpers/twilio.php';
 
 function calcularEdadDesdeFecha(?string $fechaNacimiento): ?int {
     if (!$fechaNacimiento) {
@@ -225,7 +226,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'solicitar') {
         redirectPublic('agendar-cita.php?error=sin_doctor');
     }
 
-    insertarCita($pdo, $pacienteId, $doctorValor, $fechaPreferida, $horaPreferida, $motivo, 'pendiente');
+    $citaId = insertarCita($pdo, $pacienteId, $doctorValor, $fechaPreferida, $horaPreferida, $motivo, 'pendiente');
+
+    $twilioSettings = twilioConfig();
+    if (!empty($twilioSettings['send_on_public_request'])) {
+        twilioNotifyCita($pdo, $citaId, 'solicitud_publica');
+    }
+
     redirectPublic('solicitud-enviada.php');
 }
 
@@ -266,6 +273,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'actualizar') {
     $stmt = $pdo->prepare('UPDATE citas SET fecha = ?, hora = ? WHERE id = ?');
     $stmt->execute([$fecha, $hora, $citaId]);
 
+    $twilioSettings = twilioConfig();
+    if (!empty($twilioSettings['send_on_update'])) {
+        twilioNotifyCita($pdo, $citaId, 'reprogramada');
+    }
+
     if ($redirectTo !== '') {
         redirectPublic($redirectTo . (str_contains($redirectTo, '?') ? '&' : '?') . 'actualizada=1');
     }
@@ -282,6 +294,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'estado') {
     }
     $stmt = $pdo->prepare('UPDATE citas SET estado = ? WHERE id = ?');
     $stmt->execute([$estado, $citaId]);
+
+    $twilioSettings = twilioConfig();
+    if (!empty($twilioSettings['send_on_status_change'])) {
+        twilioNotifyCita($pdo, $citaId, $estado);
+    }
+
     redirectPublic($redirectTo !== '' ? $redirectTo : 'citas.php?ok=estado');
 }
 
@@ -382,6 +400,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             sincronizarMotivoConTratamientoPrincipal($pdo, $citaId, $motivoConsulta);
         } catch (Throwable $e) {
         }
+    }
+
+    $twilioSettings = twilioConfig();
+    if (!empty($twilioSettings['send_on_internal_create'])) {
+        twilioNotifyCita($pdo, $citaId, 'creada');
     }
 
     redirectPublic('citas.php?ok=1');
