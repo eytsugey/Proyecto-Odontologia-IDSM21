@@ -1,15 +1,11 @@
 <?php
 session_start();
+require_once __DIR__ . '/../api/config/app.php';
+require_once __DIR__ . '/../api/middleware/auth.php';
 
 if (!empty($_SESSION['usuario_id'])) {
-    if ($_SESSION['rol'] === 'secretaria') {
-        header('Location: secretaria.php');
-    } elseif ($_SESSION['rol'] === 'doctor') {
-        header('Location: doctor_agenda.php');
-    } else {
-        header('Location: admin.php');
-    }
-    exit;
+    $_SESSION['rol'] = normalizarRol($_SESSION['rol'] ?? '');
+    redirectByRole($_SESSION['rol']);
 }
 
 $error = isset($_GET['error']);
@@ -60,7 +56,7 @@ $error = isset($_GET['error']);
           </div>
         <?php endif; ?>
 
-        <form action="../api/auth/login.php" method="POST" class="form">
+        <form action="<?php echo htmlspecialchars(appApiUrl('auth/login.php')); ?>" method="POST" class="form">
           <div class="form-group">
             <label for="correo">Correo electrónico</label>
             <input type="email" id="correo" name="correo" placeholder="usuario@clinica.com" required>

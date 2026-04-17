@@ -188,6 +188,5 @@
     cargarDesdeBD();
   };
 
-  renderOdontograma();
   cargarDesdeBD();
 })();

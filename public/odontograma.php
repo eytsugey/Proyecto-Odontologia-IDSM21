@@ -2,7 +2,9 @@
 session_start();
 require_once __DIR__ . '/../api/config/database.php';
 require_once __DIR__ . '/../api/middleware/auth.php';
+require_once __DIR__ . '/../api/helpers/professional_modules.php';
 requireLogin(['doctor', 'secretaria']);
+ensureProfessionalModules($pdo);
 
 $pacienteId = (int)($_GET['paciente_id'] ?? 0);
 if (!$pacienteId) {
@@ -46,7 +48,7 @@ if ($edadPaciente !== null) {
 }
 
 $titulo = 'Odontograma';
-$subtitulo = 'Selecciona un diente y cambia el estado. El color se actualiza al instante.';
+$subtitulo = 'Selecciona un diente y guarda el hallazgo clínico del paciente.';
 $active = 'pacientes';
 $extra_css = ['css/odontograma.css'];
 
