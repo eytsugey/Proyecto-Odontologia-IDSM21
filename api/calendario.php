@@ -1,49 +1,53 @@
 <?php
 session_start();
+
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/helpers/schema.php';
 require_once __DIR__ . '/middleware/auth.php';
 require_once __DIR__ . '/google_citas_sync.php';
 
-requireLogin(['secretaria', 'doctor']);
+requireLogin(['administrador', 'secretaria', 'doctor']);
 
 header('Content-Type: application/json; charset=utf-8');
 
-function jsonResponse(array $data, int $status = 200): never {
+function jsonResponse(array $data, int $status = 200): never
+{
     http_response_code($status);
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-function mapaColorEstado(string $estado): string {
+function mapaColorEstado(string $estado): string
+{
     return match ($estado) {
         'confirmada' => '#27ae60',
-        'cancelada' => '#e74c3c',
-        'atendida' => '#2980b9',
-        default => '#f39c12',
+        'cancelada'  => '#e74c3c',
+        'atendida'   => '#2980b9',
+        default      => '#f39c12',
     };
 }
 
-function obtenerJoinDoctor(PDO $pdo): array {
+function obtenerJoinDoctor(PDO $pdo): array
+{
     $mode = citasDoctorMode($pdo);
 
     if ($mode === 'cedula') {
         return [
-            'join' => 'LEFT JOIN doctores d ON d.cedula = c.cedula_doctor',
-            'select' => 'COALESCE(d.nombre, c.cedula_doctor) AS doctor'
+            'join'   => 'LEFT JOIN doctores d ON d.cedula = c.cedula_doctor',
+            'select' => 'COALESCE(d.nombre, c.cedula_doctor) AS doctor',
         ];
     }
 
     if ($mode === 'doctor_id') {
         return [
-            'join' => '',
-            'select' => "CONCAT('Doctor ', c.doctor_id) AS doctor"
+            'join'   => '',
+            'select' => "CONCAT('Doctor ', c.doctor_id) AS doctor",
         ];
     }
 
     return [
-        'join' => '',
-        'select' => "'' AS doctor"
+        'join'   => '',
+        'select' => "'' AS doctor",
     ];
 }
 
@@ -51,10 +55,13 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 if ($action === 'eventos') {
     $start = $_GET['start'] ?? null;
-    $end = $_GET['end'] ?? null;
+    $end   = $_GET['end'] ?? null;
 
     if (!$start || !$end) {
-        jsonResponse(['ok' => false, 'message' => 'Faltan fechas de rango.'], 422);
+        jsonResponse([
+            'ok' => false,
+            'message' => 'Faltan fechas de rango.',
+        ], 422);
     }
 
     $joinDoctor = obtenerJoinDoctor($pdo);
@@ -81,11 +88,14 @@ if ($action === 'eventos') {
 
     $eventos = array_map(function ($row) {
         $estado = citasEstadoNormalizado($row['estado'] ?? 'pendiente');
-        $hora = substr((string)$row['hora'], 0, 5);
+        $hora   = substr((string)$row['hora'], 0, 5);
         $motivo = trim((string)($row['motivo_consulta'] ?? ''));
         $doctor = trim((string)($row['doctor'] ?? ''));
 
-        $titleParts = [$hora . ' - ' . $row['paciente']];
+        // FullCalendar ya muestra la hora automáticamente,
+        // así que no la repetimos en el title.
+        $titleParts = [$row['paciente']];
+
         if ($motivo !== '') {
             $titleParts[] = $motivo;
         }
@@ -99,11 +109,11 @@ if ($action === 'eventos') {
             'borderColor' => mapaColorEstado($estado),
             'extendedProps' => [
                 'paciente' => $row['paciente'],
-                'motivo' => $motivo,
-                'doctor' => $doctor,
-                'estado' => $estado,
-                'hora' => $hora,
-            ]
+                'motivo'   => $motivo,
+                'doctor'   => $doctor,
+                'estado'   => $estado,
+                'hora'     => $hora,
+            ],
         ];
     }, $rows);
 
@@ -114,7 +124,10 @@ if ($action === 'agenda') {
     $fecha = $_GET['fecha'] ?? null;
 
     if (!$fecha || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
-        jsonResponse(['ok' => false, 'message' => 'Fecha inválida.'], 422);
+        jsonResponse([
+            'ok' => false,
+            'message' => 'Fecha inválida.',
+        ], 422);
     }
 
     $joinDoctor = obtenerJoinDoctor($pdo);
@@ -142,7 +155,7 @@ if ($action === 'agenda') {
 
     foreach ($citas as &$cita) {
         $cita['estado'] = citasEstadoNormalizado($cita['estado'] ?? 'pendiente');
-        $cita['hora'] = substr((string)$cita['hora'], 0, 8);
+        $cita['hora']   = substr((string)$cita['hora'], 0, 8);
     }
     unset($cita);
 
@@ -150,16 +163,22 @@ if ($action === 'agenda') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'estado') {
-    $id = (int)($_POST['cita_id'] ?? 0);
+    $id     = (int)($_POST['cita_id'] ?? 0);
     $estado = citasEstadoNormalizado($_POST['estado'] ?? '');
 
     if ($id <= 0) {
-        jsonResponse(['ok' => false, 'message' => 'Cita inválida.'], 422);
+        jsonResponse([
+            'ok' => false,
+            'message' => 'Cita inválida.',
+        ], 422);
     }
 
     $permitidos = ['pendiente', 'confirmada', 'cancelada', 'atendida'];
     if (!in_array($estado, $permitidos, true)) {
-        jsonResponse(['ok' => false, 'message' => 'Estado inválido.'], 422);
+        jsonResponse([
+            'ok' => false,
+            'message' => 'Estado inválido.',
+        ], 422);
     }
 
     $stmt = $pdo->prepare('UPDATE citas SET estado = ? WHERE id = ?');
@@ -170,14 +189,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'estado') {
         'message' => 'Estado actualizado correctamente.',
         'cita_id' => $id,
         'estado' => $estado,
+
+        'sms_ok' => false,
+        'sms_message' => null,
+        'sms_error' => null,
+        'sms_error_code' => null,
+        'sms_sid' => null,
+        'sms_status' => null,
+
         'google_ok' => false,
         'google_message' => null,
         'google_error' => null,
     ];
 
+    if ($estado === 'confirmada') {
+        require_once __DIR__ . '/twilio_sms.php';
+
+        try {
+            $stmtCita = $pdo->prepare("
+                SELECT
+                    p.nombre,
+                    p.telefono,
+                    c.fecha,
+                    c.hora
+                FROM citas c
+                INNER JOIN pacientes p ON p.id = c.paciente_id
+                WHERE c.id = ?
+                LIMIT 1
+            ");
+            $stmtCita->execute([$id]);
+            $cita = $stmtCita->fetch(PDO::FETCH_ASSOC);
+
+            if (!$cita) {
+                $respuesta['sms_error'] = 'No se encontraron los datos de la cita para enviar el SMS.';
+            } elseif (empty($cita['telefono'])) {
+                $respuesta['sms_error'] = 'El paciente no tiene teléfono registrado.';
+            } else {
+                $hora = substr((string)$cita['hora'], 0, 5);
+                $telefonoDestino = (string)$cita['telefono'];
+
+                $mensaje = "Hola {$cita['nombre']}, tu cita ha sido confirmada para el {$cita['fecha']} a las {$hora}.";
+
+                error_log('TWILIO telefono BD: ' . $telefonoDestino);
+                error_log('TWILIO mensaje: ' . $mensaje);
+
+                $resultadoSMS = enviarSMS($telefonoDestino, $mensaje);
+
+                error_log('TWILIO resultado: ' . json_encode($resultadoSMS, JSON_UNESCAPED_UNICODE));
+
+                if (!empty($resultadoSMS['ok'])) {
+                    $respuesta['sms_ok'] = true;
+                    $respuesta['sms_message'] = 'SMS enviado correctamente.';
+                    $respuesta['sms_sid'] = $resultadoSMS['sid'] ?? null;
+                    $respuesta['sms_status'] = $resultadoSMS['status'] ?? null;
+                } else {
+                    $respuesta['sms_ok'] = false;
+                    $respuesta['sms_error'] = $resultadoSMS['error'] ?? 'Error desconocido al enviar SMS';
+                    $respuesta['sms_error_code'] = $resultadoSMS['code'] ?? null;
+
+                    if (($resultadoSMS['code'] ?? null) == 21608) {
+                        $respuesta['sms_error'] = 'La cuenta Twilio de prueba solo puede enviar SMS a numeros verificados.';
+                    } elseif (($resultadoSMS['code'] ?? null) == 21211) {
+                        $respuesta['sms_error'] = 'El numero del paciente no tiene un formato valido.';
+                    } elseif (($resultadoSMS['code'] ?? null) == 21606) {
+                        $respuesta['sms_error'] = 'El numero remitente de Twilio no es valido para enviar SMS.';
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+            $respuesta['sms_ok'] = false;
+            $respuesta['sms_error'] = 'La cita se confirmó, pero ocurrió un error al enviar el SMS: ' . $e->getMessage();
+        }
+    } else {
+        $respuesta['sms_message'] = 'No se envió SMS porque el estado no es confirmada.';
+    }
+
     try {
         $resultadoGoogle = sincronizarCitaConGoogle($pdo, $id);
-
         $accionGoogle = $resultadoGoogle['accion'] ?? 'sin_cambios';
 
         $respuesta['google_ok'] = true;
@@ -201,4 +289,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'estado') {
     jsonResponse($respuesta);
 }
 
-jsonResponse(['ok' => false, 'message' => 'Acción no válida.'], 404);
+jsonResponse([
+    'ok' => false,
+    'message' => 'Acción no válida.',
+], 404);

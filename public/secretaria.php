@@ -3,6 +3,7 @@ session_start();
 require_once __DIR__ . '/../api/config/database.php';
 require_once __DIR__ . '/../api/middleware/auth.php';
 require_once __DIR__ . '/../api/helpers/schema.php';
+require_once __DIR__ . '/../api/config/app.php';
 
 requireLogin(['secretaria', 'doctor']);
 
@@ -48,8 +49,6 @@ include '_layout_top.php';
   </div>
 
   <div class="panel-block agenda-block">
-    <div id="googleNotice" class="alerta" hidden></div>
-
     <div class="panel-head agenda-head">
       <div>
         <h2 id="tituloCitas">Citas del <?php echo htmlspecialchars($fechaInicial); ?></h2>
@@ -74,7 +73,7 @@ include '_layout_top.php';
             <tr><td colspan="5" class="empty-cell">No hay citas para esta fecha.</td></tr>
           <?php else: ?>
             <?php foreach ($citasHoy as $c): ?>
-              <tr>
+              <tr data-cita-id="<?php echo (int)$c['id']; ?>">
                 <td><?php echo htmlspecialchars(substr((string)$c['hora'], 0, 5)); ?></td>
                 <td><?php echo htmlspecialchars($c['nombre']); ?></td>
                 <td><?php echo htmlspecialchars($c['motivo_consulta'] ?: 'Consulta general'); ?></td>
@@ -104,6 +103,7 @@ include '_layout_top.php';
 const API_CALENDARIO = <?php echo json_encode(appApiUrl('calendario.php')); ?>;
 let fechaSeleccionada = <?php echo json_encode($fechaInicial); ?>;
 let calendar;
+let actualizandoAgenda = false;
 
 function escapeHtml(texto) {
   const map = {
@@ -119,18 +119,17 @@ function escapeHtml(texto) {
   });
 }
 
-function mostrarAviso(mensaje, tipo = 'ok') {
-  const box = document.getElementById('googleNotice');
-  if (!box) return;
+function setBotonesFilaDisabled(contenedor, disabled) {
+  if (!contenedor) return;
 
-  box.textContent = mensaje;
-  box.className = `alerta alerta-${tipo}`;
-  box.hidden = false;
-
-  clearTimeout(box._timer);
-  box._timer = setTimeout(() => {
-    box.hidden = true;
-  }, 5000);
+  contenedor.querySelectorAll('button, a.link-action').forEach(function(el) {
+    if (el.tagName === 'BUTTON') {
+      el.disabled = disabled;
+    } else {
+      el.style.pointerEvents = disabled ? 'none' : '';
+      el.style.opacity = disabled ? '0.7' : '';
+    }
+  });
 }
 
 function renderFilaCita(cita) {
@@ -139,7 +138,7 @@ function renderFilaCita(cita) {
   const estado = (cita.estado || 'pendiente').toLowerCase();
 
   return `
-    <tr>
+    <tr data-cita-id="${Number(cita.id)}">
       <td>${escapeHtml(hora)}</td>
       <td>${escapeHtml(cita.nombre || '')}</td>
       <td>${escapeHtml(motivo)}</td>
@@ -156,63 +155,216 @@ function renderFilaCita(cita) {
   `;
 }
 
-async function cargarAgenda(fecha) {
+function mostrarAviso(mensaje, tipo = 'info') {
+  const avisoAnterior = document.querySelector('.aviso-flotante');
+  if (avisoAnterior) {
+    avisoAnterior.remove();
+  }
+
+  const aviso = document.createElement('div');
+  aviso.className = `aviso-flotante aviso-${tipo}`;
+  aviso.textContent = mensaje;
+
+  document.body.appendChild(aviso);
+
+  setTimeout(() => {
+    aviso.classList.add('visible');
+  }, 10);
+
+  setTimeout(() => {
+    aviso.classList.remove('visible');
+    setTimeout(() => {
+      if (aviso.parentNode) {
+        aviso.remove();
+      }
+    }, 300);
+  }, 3500);
+}
+
+async function cargarAgenda(fecha, mantenerVista = false) {
   fechaSeleccionada = fecha;
   const titulo = document.getElementById('tituloCitas');
   const tabla = document.getElementById('tablaCitasHoy');
 
   titulo.textContent = 'Citas del ' + fecha;
-  tabla.innerHTML = '<tr><td colspan="5" class="empty-cell">Cargando...</td></tr>';
 
-  const response = await fetch(`${API_CALENDARIO}?action=agenda&fecha=${encodeURIComponent(fecha)}`);
-  const data = await response.json();
-
-  if (!Array.isArray(data) || data.length === 0) {
-    tabla.innerHTML = '<tr><td colspan="5" class="empty-cell">No hay citas para esta fecha.</td></tr>';
-    return;
+  if (!mantenerVista) {
+    tabla.innerHTML = '<tr><td colspan="5" class="empty-cell">Cargando...</td></tr>';
   }
 
-  tabla.innerHTML = data.map(renderFilaCita).join('');
+  try {
+    actualizandoAgenda = true;
+
+    const response = await fetch(`${API_CALENDARIO}?action=agenda&fecha=${encodeURIComponent(fecha)}&_=${Date.now()}`, {
+      cache: 'no-store'
+    });
+
+    const texto = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(texto);
+    } catch (e) {
+      console.error('Respuesta inválida al cargar agenda:', texto);
+      tabla.innerHTML = '<tr><td colspan="5" class="empty-cell">No se pudo cargar la agenda.</td></tr>';
+      return;
+    }
+
+    if (!Array.isArray(data) || data.length === 0) {
+      tabla.innerHTML = '<tr><td colspan="5" class="empty-cell">No hay citas para esta fecha.</td></tr>';
+      return;
+    }
+
+    tabla.innerHTML = data.map(renderFilaCita).join('');
+  } catch (error) {
+    console.error('Error al cargar agenda:', error);
+    tabla.innerHTML = '<tr><td colspan="5" class="empty-cell">Ocurrió un error al cargar la agenda.</td></tr>';
+  } finally {
+    actualizandoAgenda = false;
+  }
 }
 
-async function cambiarEstado(citaId, estado) {
-  const body = new URLSearchParams();
-  body.append('action', 'estado');
-  body.append('cita_id', citaId);
-  body.append('estado', estado);
+async function refrescarTodo() {
+  await cargarAgenda(fechaSeleccionada, true);
 
-  const response = await fetch(API_CALENDARIO, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-    },
-    body: body.toString()
-  });
+  if (calendar) {
+    calendar.refetchEvents();
+  }
+}
 
-  const data = await response.json();
+function construirTooltipEvento(event) {
+  const paciente = event.extendedProps?.paciente || event.title || '';
+  const motivo = event.extendedProps?.motivo || 'Consulta general';
+  const estado = event.extendedProps?.estado || '';
+  const hora = event.extendedProps?.hora || '';
 
-  if (!data.ok) {
-    mostrarAviso(data.message || 'No se pudo actualizar la cita.', 'error');
-    return;
+  let partes = [];
+
+  if (hora) partes.push(`Hora: ${hora}`);
+  if (paciente) partes.push(`Paciente: ${paciente}`);
+  if (motivo) partes.push(`Motivo: ${motivo}`);
+  if (estado) partes.push(`Estado: ${estado}`);
+
+  return partes.join('\n');
+}
+
+function renderEvento(info) {
+  const paciente = info.event.extendedProps?.paciente || info.event.title || '';
+  const motivo = info.event.extendedProps?.motivo || '';
+  const vista = info.view.type;
+
+  if (vista === 'dayGridMonth') {
+    return {
+      html: `<div class="fc-event-custom fc-event-month" title="${escapeHtml(construirTooltipEvento(info.event)).replace(/\n/g, '&#10;')}">
+              <span class="fc-event-paciente">${escapeHtml(paciente)}</span>
+            </div>`
+    };
   }
 
-  await cargarAgenda(fechaSeleccionada);
-  calendar.refetchEvents();
+  return {
+    html: `<div class="fc-event-custom" title="${escapeHtml(construirTooltipEvento(info.event)).replace(/\n/g, '&#10;')}">
+            <span class="fc-event-paciente">${escapeHtml(paciente)}</span>
+            ${motivo ? `<span class="fc-event-sep"> | </span><span class="fc-event-motivo">${escapeHtml(motivo)}</span>` : ''}
+          </div>`
+  };
+}
 
-  if (data.google_ok) {
-    mostrarAviso(data.google_message || 'La cita se sincronizó correctamente con Google Calendar.', 'ok');
-  } else if (data.google_error) {
-    mostrarAviso(data.google_error, 'error');
-  } else {
-    mostrarAviso(data.message || 'La cita se actualizó correctamente.', 'ok');
+async function cambiarEstado(citaId, estado, botonOrigen = null) {
+  const fila = botonOrigen ? botonOrigen.closest('tr') : document.querySelector(`tr[data-cita-id="${Number(citaId)}"]`);
+  const acciones = fila ? fila.querySelector('.acciones-cita') : null;
+
+  try {
+    if (acciones) {
+      setBotonesFilaDisabled(acciones, true);
+    }
+
+    const body = new URLSearchParams();
+    body.append('action', 'estado');
+    body.append('cita_id', citaId);
+    body.append('estado', estado);
+
+    const response = await fetch(API_CALENDARIO, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+      },
+      cache: 'no-store',
+      body: body.toString()
+    });
+
+    const texto = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(texto);
+    } catch (e) {
+      mostrarAviso('La respuesta del servidor no fue válida.', 'error');
+      console.error('Respuesta no JSON:', texto);
+      return;
+    }
+
+    if (!data.ok) {
+      mostrarAviso(data.message || data.google_error || 'No se pudo actualizar la cita.', 'error');
+      return;
+    }
+
+    let mensaje = 'Estado actualizado correctamente.';
+    let tipoAviso = 'ok';
+
+    if (estado === 'confirmada') {
+      if (data.sms_ok) {
+        mensaje = 'Cita confirmada y SMS enviado correctamente.';
+        tipoAviso = 'ok';
+      } else if (data.sms_error) {
+        const smsError = String(data.sms_error || '');
+
+        if (smsError.includes('21608')) {
+          mensaje = 'Cita confirmada, pero el número no está verificado en Twilio trial.';
+        } else if (smsError.includes('429') || smsError.toLowerCase().includes('daily messages limit')) {
+          mensaje = 'Cita confirmada, pero hoy ya se alcanzó el límite diario de SMS.';
+        } else {
+          mensaje = 'Cita confirmada, pero no se pudo enviar el SMS.';
+        }
+
+        tipoAviso = 'info';
+        console.error('Error Twilio:', data.sms_error);
+      } else {
+        mensaje = 'Cita confirmada correctamente.';
+        tipoAviso = 'ok';
+      }
+    } else if (estado === 'cancelada') {
+      mensaje = 'Cita cancelada correctamente.';
+      tipoAviso = 'info';
+    } else if (estado === 'atendida') {
+      mensaje = 'Cita marcada como atendida.';
+      tipoAviso = 'ok';
+    } else if (estado === 'pendiente') {
+      mensaje = 'La cita volvió a estado pendiente.';
+      tipoAviso = 'info';
+    }
+
+    if (data.google_ok === false && data.google_error) {
+      mensaje += ' ' + data.google_error;
+      tipoAviso = 'info';
+    }
+
+    mostrarAviso(mensaje, tipoAviso);
+    await refrescarTodo();
+  } catch (error) {
+    console.error('Error al cambiar estado:', error);
+    mostrarAviso('Ocurrió un error al actualizar la cita.', 'error');
+  } finally {
+    if (acciones) {
+      setBotonesFilaDisabled(acciones, false);
+    }
   }
 }
 
 document.addEventListener('click', async function(e) {
   const btn = e.target.closest('[data-id][data-estado]');
-  if (!btn) return;
+  if (!btn || actualizandoAgenda) return;
 
-  await cambiarEstado(btn.dataset.id, btn.dataset.estado);
+  await cambiarEstado(btn.dataset.id, btn.dataset.estado, btn);
 });
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -223,6 +375,13 @@ document.addEventListener('DOMContentLoaded', function() {
     initialView: 'dayGridMonth',
     locale: 'es',
     height: 'auto',
+    dayMaxEventRows: 4,
+    moreLinkText: 'más',
+    eventTimeFormat: {
+      hour: '2-digit',
+      minute: '2-digit',
+      meridiem: false
+    },
     headerToolbar: {
       left: 'prev,next today',
       center: 'title',
@@ -233,12 +392,29 @@ document.addEventListener('DOMContentLoaded', function() {
       month: 'Mes',
       week: 'Semana'
     },
-    events: `${API_CALENDARIO}?action=eventos`,
+    events: function(fetchInfo, successCallback, failureCallback) {
+      const url = `${API_CALENDARIO}?action=eventos&start=${encodeURIComponent(fetchInfo.startStr)}&end=${encodeURIComponent(fetchInfo.endStr)}&_=${Date.now()}`;
+
+      fetch(url, { cache: 'no-store' })
+        .then(response => response.json())
+        .then(data => successCallback(data))
+        .catch(error => {
+          console.error('Error al cargar eventos del calendario:', error);
+          failureCallback(error);
+        });
+    },
+    eventContent: function(info) {
+      return renderEvento(info);
+    },
+    eventDidMount: function(info) {
+      info.el.setAttribute('title', construirTooltipEvento(info.event));
+    },
     dateClick: function(info) {
       cargarAgenda(info.dateStr);
     },
     eventClick: function(info) {
-      cargarAgenda(info.event.startStr.substring(0, 10));
+      const fechaEvento = info.event.startStr.substring(0, 10);
+      cargarAgenda(fechaEvento);
     }
   });
 
@@ -247,6 +423,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   btnHoy.addEventListener('click', function() {
     const hoy = new Date().toLocaleDateString('en-CA');
+    fechaSeleccionada = hoy;
     calendar.today();
     cargarAgenda(hoy);
   });
@@ -270,26 +447,6 @@ document.addEventListener('DOMContentLoaded', function() {
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
   padding: 1.25rem;
   min-width: 0;
-}
-
-.alerta {
-  padding: 12px 14px;
-  border-radius: 10px;
-  margin-bottom: 18px;
-  font-size: 14px;
-  border: 1px solid transparent;
-}
-
-.alerta-ok {
-  background: #eafaf1;
-  color: #1e8449;
-  border-color: #b7e4c7;
-}
-
-.alerta-error {
-  background: #fdecea;
-  color: #b03a2e;
-  border-color: #f5c6cb;
 }
 
 .panel-head {
@@ -339,6 +496,36 @@ document.addEventListener('DOMContentLoaded', function() {
   min-height: 680px;
 }
 
+#calendar .fc-daygrid-event {
+  border-radius: 6px;
+  padding: 1px 4px;
+}
+
+#calendar .fc-event-custom {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+#calendar .fc-event-month .fc-event-paciente {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+#calendar .fc-event-motivo {
+  font-weight: 500;
+}
+
+#calendar .fc-daygrid-event .fc-event-time {
+  font-weight: 700;
+}
+
 .tabla-wrap {
   overflow-x: auto;
 }
@@ -385,6 +572,7 @@ document.addEventListener('DOMContentLoaded', function() {
   cursor: pointer;
   text-decoration: none;
   font-weight: 600;
+  transition: opacity .2s ease;
 }
 
 .link-action {
@@ -396,6 +584,45 @@ document.addEventListener('DOMContentLoaded', function() {
 .mini-btn.cancel { background: #fee2e2; color: #991b1b; }
 .mini-btn.done { background: #dbeafe; color: #1d4ed8; }
 .btn-secundario { background: #f8fafc; color: #0f172a; }
+
+.mini-btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.aviso-flotante {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 9999;
+  min-width: 260px;
+  max-width: 420px;
+  padding: .9rem 1rem;
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
+  background: #0f172a;
+  color: #fff;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: all .28s ease;
+}
+
+.aviso-flotante.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.aviso-ok {
+  background: #166534;
+}
+
+.aviso-info {
+  background: #1d4ed8;
+}
+
+.aviso-error {
+  background: #991b1b;
+}
 
 @media (max-width: 1180px) {
   .panel.secretaria-grid {
@@ -419,6 +646,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   #calendar {
     min-height: 500px;
+  }
+
+  .aviso-flotante {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    min-width: auto;
+    max-width: none;
   }
 }
 </style>
