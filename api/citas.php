@@ -1,10 +1,11 @@
 <?php
 session_start();
+
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/config/app.php';
 require_once __DIR__ . '/helpers/schema.php';
 require_once __DIR__ . '/helpers/professional_modules.php';
-require_once __DIR__ . '/helpers/twilio.php';
+require_once __DIR__ . '/google_citas_sync.php';
 
 function calcularEdadDesdeFecha(?string $fechaNacimiento): ?int {
     if (!$fechaNacimiento) {
@@ -133,7 +134,6 @@ function asignarTratamientoACita(PDO $pdo, int $citaId, int $pacienteId, int $tr
     $stmt->execute([$citaId, $tratamientoId, $pacienteId > 0 ? $pacienteId : null, $cantidad, $precioUnitario, $subtotal, $estado, $notas]);
 }
 
-
 function buscarTratamientoActivoPorNombre(PDO $pdo, string $nombre): ?array {
     ensureProfessionalModules($pdo);
     $nombre = trim($nombre);
@@ -172,7 +172,7 @@ function actualizarTratamientoDeCita(PDO $pdo, int $detalleId, int $cantidad, st
     $stmt = $pdo->prepare('SELECT precio_unitario FROM cita_tratamientos WHERE id = ? LIMIT 1');
     $stmt->execute([$detalleId]);
     $precioUnitario = $stmt->fetchColumn();
-    if ($precioUnitario === False) {
+    if ($precioUnitario === false) {
         throw new RuntimeException('Tratamiento no encontrado.');
     }
 
@@ -226,13 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'solicitar') {
         redirectPublic('agendar-cita.php?error=sin_doctor');
     }
 
-    $citaId = insertarCita($pdo, $pacienteId, $doctorValor, $fechaPreferida, $horaPreferida, $motivo, 'pendiente');
-
-    $twilioSettings = twilioConfig();
-    if (!empty($twilioSettings['send_on_public_request'])) {
-        twilioNotifyCita($pdo, $citaId, 'solicitud_publica');
-    }
-
+    insertarCita($pdo, $pacienteId, $doctorValor, $fechaPreferida, $horaPreferida, $motivo, 'pendiente');
     redirectPublic('solicitud-enviada.php');
 }
 
@@ -273,9 +267,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'actualizar') {
     $stmt = $pdo->prepare('UPDATE citas SET fecha = ?, hora = ? WHERE id = ?');
     $stmt->execute([$fecha, $hora, $citaId]);
 
-    $twilioSettings = twilioConfig();
-    if (!empty($twilioSettings['send_on_update'])) {
-        twilioNotifyCita($pdo, $citaId, 'reprogramada');
+    try {
+        sincronizarCitaConGoogle($pdo, $citaId);
+    } catch (Throwable $e) {
+        error_log('Error al sincronizar cita actualizada con Google Calendar: ' . $e->getMessage());
     }
 
     if ($redirectTo !== '') {
@@ -289,15 +284,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'estado') {
     $citaId = (int)($_POST['cita_id'] ?? 0);
     $estado = citasEstadoNormalizado($_POST['estado'] ?? 'pendiente');
     $redirectTo = trim((string)($_POST['redirect_to'] ?? ''));
+
     if ($citaId <= 0 || !in_array($estado, ['confirmada', 'cancelada', 'atendida', 'pendiente'], true)) {
         redirectPublic($redirectTo !== '' ? $redirectTo : 'citas.php?error=estado');
     }
+
     $stmt = $pdo->prepare('UPDATE citas SET estado = ? WHERE id = ?');
     $stmt->execute([$estado, $citaId]);
 
-    $twilioSettings = twilioConfig();
-    if (!empty($twilioSettings['send_on_status_change'])) {
-        twilioNotifyCita($pdo, $citaId, $estado);
+    try {
+        sincronizarCitaConGoogle($pdo, $citaId);
+    } catch (Throwable $e) {
+        error_log('Error al sincronizar cambio de estado con Google Calendar: ' . $e->getMessage());
     }
 
     redirectPublic($redirectTo !== '' ? $redirectTo : 'citas.php?ok=estado');
@@ -318,6 +316,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'asignar_tratamiento') 
     try {
         asignarTratamientoACita($pdo, $citaId, $pacienteId, $tratamientoId, $cantidad, $estadoTratamiento !== '' ? $estadoTratamiento : 'planeado', $notas !== '' ? $notas : null);
         sincronizarMotivoConTratamientoPrincipal($pdo, $citaId);
+
+        try {
+            sincronizarCitaConGoogle($pdo, $citaId);
+        } catch (Throwable $e) {
+            error_log('Error al sincronizar tratamiento asignado con Google Calendar: ' . $e->getMessage());
+        }
+
         redirectPublic('citas.php?ok=tratamiento');
     } catch (Throwable $e) {
         redirectPublic('citas.php?error=tratamiento');
@@ -352,10 +357,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'eliminar_tratamiento')
         $stmt = $pdo->prepare('SELECT cita_id, motivo_consulta FROM cita_tratamientos ct LEFT JOIN citas c ON c.id = ct.cita_id WHERE ct.id = ? LIMIT 1');
         $stmt->execute([$detalleId]);
         $detalle = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
         eliminarTratamientoDeCita($pdo, $detalleId);
+
         if (!empty($detalle['cita_id'])) {
-            sincronizarMotivoConTratamientoPrincipal($pdo, (int)$detalle['cita_id'], (string)($detalle['motivo_consulta'] ?? ''));
+            $citaId = (int)$detalle['cita_id'];
+            sincronizarMotivoConTratamientoPrincipal($pdo, $citaId, (string)($detalle['motivo_consulta'] ?? ''));
+
+            try {
+                sincronizarCitaConGoogle($pdo, $citaId);
+            } catch (Throwable $e) {
+                error_log('Error al sincronizar eliminación de tratamiento con Google Calendar: ' . $e->getMessage());
+            }
         }
+
         redirectPublic('citas.php?ok=tratamiento_eliminado');
     } catch (Throwable $e) {
         redirectPublic('citas.php?error=tratamiento');
@@ -402,9 +417,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    $twilioSettings = twilioConfig();
-    if (!empty($twilioSettings['send_on_internal_create'])) {
-        twilioNotifyCita($pdo, $citaId, 'creada');
+    try {
+        sincronizarCitaConGoogle($pdo, $citaId);
+    } catch (Throwable $e) {
+        error_log('Error al sincronizar nueva cita con Google Calendar: ' . $e->getMessage());
     }
 
     redirectPublic('citas.php?ok=1');
