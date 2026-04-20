@@ -207,72 +207,116 @@ function pmEliminarTratamientoRealizadoHistoria(PDO $pdo, int $planItemId): void
     $stmt->execute([$planItemId]);
 }
 
-function pmSincronizarTratamientoRealizadoHistoria(PDO $pdo, int $planItemId, ?int $registradoPor = null): void {
-    if ($planItemId <= 0) {
-        return;
-    }
-
+function pmSincronizarTratamientoRealizadoHistoria(PDO $pdo, int $planItemId, ?int $registradoPor = null): void
+{
     ensureProfessionalModules($pdo);
 
-    $stmt = $pdo->prepare("SELECT 
-            pi.id,
-            pi.plan_id,
-            pi.tratamiento_id,
-            pi.cantidad,
-            pi.precio_unitario,
-            pi.subtotal,
-            pi.estado,
-            pi.notas,
+    $stmt = $pdo->prepare("
+        SELECT 
+            pti.id,
+            pti.plan_id,
+            pti.tratamiento_id,
+            pti.cantidad,
+            pti.precio_unitario,
+            pti.subtotal,
+            pti.estado,
+            pti.notas,
             pt.paciente_id,
             tc.nombre AS tratamiento_nombre
-        FROM plan_tratamiento_items pi
-        JOIN planes_tratamiento pt ON pt.id = pi.plan_id
-        JOIN tratamientos_catalogo tc ON tc.id = pi.tratamiento_id
-        WHERE pi.id = ?
-        LIMIT 1");
+        FROM plan_tratamiento_items pti
+        JOIN planes_tratamiento pt ON pt.id = pti.plan_id
+        JOIN tratamientos_catalogo tc ON tc.id = pti.tratamiento_id
+        WHERE pti.id = ?
+        LIMIT 1
+    ");
     $stmt->execute([$planItemId]);
     $item = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$item) {
-        pmEliminarTratamientoRealizadoHistoria($pdo, $planItemId);
         return;
     }
 
     $estado = strtolower(trim((string)($item['estado'] ?? '')));
-    if (!in_array($estado, ['realizado', 'pagado'], true)) {
-        pmEliminarTratamientoRealizadoHistoria($pdo, $planItemId);
+
+    $stmt = $pdo->prepare("
+        SELECT id
+        FROM historia_tratamientos_realizados
+        WHERE plan_item_id = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$planItemId]);
+    $existenteId = $stmt->fetchColumn();
+
+    if ($estado !== 'realizado') {
+        if ($existenteId) {
+            $stmt = $pdo->prepare("DELETE FROM historia_tratamientos_realizados WHERE id = ?");
+            $stmt->execute([$existenteId]);
+        }
         return;
     }
 
-    $stmt = $pdo->prepare('SELECT id FROM historia_tratamientos_realizados WHERE plan_item_id = ? LIMIT 1');
-    $stmt->execute([$planItemId]);
-    $existenteId = (int)$stmt->fetchColumn();
-
-    $params = [
-        (int)$item['paciente_id'],
-        (int)$item['plan_id'],
+    $datos = [
+        $item['paciente_id'],
+        $item['plan_id'] !== null ? (int)$item['plan_id'] : null,
+        $planItemId,
         (int)$item['tratamiento_id'],
         (string)$item['tratamiento_nombre'],
-        (int)$item['cantidad'],
+        max(1, (int)$item['cantidad']),
         (float)$item['precio_unitario'],
         (float)$item['subtotal'],
-        trim((string)($item['notas'] ?? '')) ?: null,
+        trim((string)($item['notas'] ?? '')) !== '' ? (string)$item['notas'] : null,
         $registradoPor,
     ];
 
-    if ($existenteId > 0) {
-        $sql = 'UPDATE historia_tratamientos_realizados
-            SET paciente_id = ?, plan_id = ?, tratamiento_id = ?, tratamiento_nombre = ?, cantidad = ?, precio_unitario = ?, subtotal = ?, notas = ?, registrado_por = ?, fecha_realizacion = NOW()
-            WHERE plan_item_id = ?';
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute(array_merge($params, [$planItemId]));
+    if ($existenteId) {
+        $stmt = $pdo->prepare("
+            UPDATE historia_tratamientos_realizados
+            SET
+                paciente_id = ?,
+                plan_id = ?,
+                tratamiento_id = ?,
+                tratamiento_nombre = ?,
+                cantidad = ?,
+                precio_unitario = ?,
+                subtotal = ?,
+                notas = ?,
+                fecha_realizacion = NOW(),
+                registrado_por = ?
+            WHERE plan_item_id = ?
+        ");
+        $stmt->execute([
+            $datos[0],
+            $datos[1],
+            $datos[3],
+            $datos[4],
+            $datos[5],
+            $datos[6],
+            $datos[7],
+            $datos[8],
+            $datos[9],
+            $planItemId,
+        ]);
         return;
     }
 
-    $sql = 'INSERT INTO historia_tratamientos_realizados (paciente_id, plan_id, plan_item_id, tratamiento_id, tratamiento_nombre, cantidad, precio_unitario, subtotal, notas, registrado_por)
-        VALUES (?,?,?,?,?,?,?,?,?,?)';
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute(array_merge([(int)$item['paciente_id'], (int)$item['plan_id'], $planItemId], array_slice($params, 2)));
+    $stmt = $pdo->prepare("
+        INSERT INTO historia_tratamientos_realizados
+        (
+            paciente_id,
+            plan_id,
+            plan_item_id,
+            tratamiento_id,
+            tratamiento_nombre,
+            cantidad,
+            precio_unitario,
+            subtotal,
+            notas,
+            fecha_realizacion,
+            registrado_por
+        )
+        VALUES (?,?,?,?,?,?,?,?,?,NOW(),?)
+    ");
+    $stmt->execute($datos);
 }
 
 function pmTratamientosRealizadosHistoriaPaciente(PDO $pdo, int $pacienteId): array {
