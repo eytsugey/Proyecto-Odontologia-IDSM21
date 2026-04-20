@@ -29,6 +29,7 @@ $action = $_POST['action'] ?? 'crear_plan';
 $returnTo = pmPlanReturnTo((string)($_POST['return_to'] ?? 'plan_tratamiento.php'));
 $tipoPlan = pmNormalizarTipoPlan($_POST['tipo_plan'] ?? ($returnTo === 'ortodoncia.php' ? 'ortodoncia' : 'general'));
 $pacienteId = (int)($_POST['paciente_id'] ?? 0);
+$registradoPor = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 
 if ($pacienteId <= 0) {
     pmRedirectPlan($returnTo, 0, ['error' => 'paciente']);
@@ -53,6 +54,7 @@ if ($action === 'crear_plan') {
             'estado' => $estado,
             'cita_id' => $citaId,
         ]);
+
         $stmt = $pdo->prepare('UPDATE planes_tratamiento SET cita_id = ?, titulo = ?, diagnostico = ?, objetivo = ?, estado = ? WHERE id = ? AND paciente_id = ?');
         $stmt->execute([
             $citaId > 0 ? $citaId : null,
@@ -63,6 +65,7 @@ if ($action === 'crear_plan') {
             $planId,
             $pacienteId,
         ]);
+
         pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'ok' => 'plan']);
     }
 
@@ -76,6 +79,7 @@ if ($action === 'crear_plan') {
         $objetivo !== '' ? $objetivo : null,
         $estado !== '' ? $estado : 'propuesto',
     ]);
+
     $planId = (int)$pdo->lastInsertId();
     pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'ok' => 'plan']);
 }
@@ -131,7 +135,15 @@ if ($action === 'agregar_fase') {
     }
 
     $stmt = $pdo->prepare('INSERT INTO plan_tratamiento_fases (plan_id, nombre, descripcion, orden, estado, fecha_objetivo) VALUES (?,?,?,?,?,?)');
-    $stmt->execute([$planId, $nombre, $descripcion !== '' ? $descripcion : null, $orden, $estado !== '' ? $estado : 'pendiente', $fechaObjetivo !== '' ? $fechaObjetivo : null]);
+    $stmt->execute([
+        $planId,
+        $nombre,
+        $descripcion !== '' ? $descripcion : null,
+        $orden,
+        $estado !== '' ? $estado : 'pendiente',
+        $fechaObjetivo !== '' ? $fechaObjetivo : null
+    ]);
+
     pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'ok' => 'fase']);
 }
 
@@ -148,7 +160,16 @@ if ($action === 'actualizar_fase') {
     }
 
     $stmt = $pdo->prepare('UPDATE plan_tratamiento_fases SET nombre = ?, descripcion = ?, orden = ?, estado = ?, fecha_objetivo = ? WHERE id = ? AND plan_id = ?');
-    $stmt->execute([$nombre, $descripcion !== '' ? $descripcion : null, $orden, $estado !== '' ? $estado : 'pendiente', $fechaObjetivo !== '' ? $fechaObjetivo : null, $faseId, $planId]);
+    $stmt->execute([
+        $nombre,
+        $descripcion !== '' ? $descripcion : null,
+        $orden,
+        $estado !== '' ? $estado : 'pendiente',
+        $fechaObjetivo !== '' ? $fechaObjetivo : null,
+        $faseId,
+        $planId
+    ]);
+
     pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'ok' => 'fase_editada']);
 }
 
@@ -160,8 +181,10 @@ if ($action === 'eliminar_fase') {
 
     $stmt = $pdo->prepare('UPDATE plan_tratamiento_items SET fase_id = NULL WHERE fase_id = ? AND plan_id = ?');
     $stmt->execute([$faseId, $planId]);
+
     $stmt = $pdo->prepare('DELETE FROM plan_tratamiento_fases WHERE id = ? AND plan_id = ?');
     $stmt->execute([$faseId, $planId]);
+
     pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'ok' => 'fase_eliminada']);
 }
 
@@ -179,16 +202,35 @@ if ($action === 'agregar_item') {
     $stmt = $pdo->prepare('SELECT precio_base FROM tratamientos_catalogo WHERE id = ? LIMIT 1');
     $stmt->execute([$tratamientoId]);
     $precio = $stmt->fetchColumn();
+
     if ($precio === false) {
         pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'error' => 'item']);
     }
 
     $subtotal = ((float)$precio) * $cantidad;
+
     $stmt = $pdo->prepare('INSERT INTO plan_tratamiento_items (plan_id, fase_id, tratamiento_id, cantidad, precio_unitario, subtotal, estado, notas) VALUES (?,?,?,?,?,?,?,?)');
-    $stmt->execute([$planId, $faseId > 0 ? $faseId : null, $tratamientoId, $cantidad, $precio, $subtotal, $estado !== '' ? $estado : 'pendiente', $notas !== '' ? $notas : null]);
-    $itemIdNuevo = (int)$pdo->lastInsertId();
+    $stmt->execute([
+        $planId,
+        $faseId > 0 ? $faseId : null,
+        $tratamientoId,
+        $cantidad,
+        $precio,
+        $subtotal,
+        $estado !== '' ? $estado : 'pendiente',
+        $notas !== '' ? $notas : null
+    ]);
+
+    $itemId = (int)$pdo->lastInsertId();
+
     pmRecalcularPlanTotal($pdo, $planId);
-    pmSincronizarTratamientoRealizadoHistoria($pdo, $itemIdNuevo, (int)($_SESSION['usuario_id'] ?? 0) ?: null);
+
+    try {
+        pmSincronizarTratamientoRealizadoHistoria($pdo, $itemId, $registradoPor);
+    } catch (Throwable $e) {
+        error_log('Error al sincronizar item agregado del plan con historia clínica: ' . $e->getMessage());
+    }
+
     pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'ok' => 'item']);
 }
 
@@ -206,28 +248,53 @@ if ($action === 'actualizar_item') {
     $stmt = $pdo->prepare('SELECT precio_unitario FROM plan_tratamiento_items WHERE id = ? AND plan_id = ? LIMIT 1');
     $stmt->execute([$itemId, $planId]);
     $precio = $stmt->fetchColumn();
+
     if ($precio === false) {
         pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'error' => 'item']);
     }
 
     $subtotal = ((float)$precio) * $cantidad;
+
     $stmt = $pdo->prepare('UPDATE plan_tratamiento_items SET fase_id = ?, cantidad = ?, subtotal = ?, estado = ?, notas = ? WHERE id = ? AND plan_id = ?');
-    $stmt->execute([$faseId > 0 ? $faseId : null, $cantidad, $subtotal, $estado !== '' ? $estado : 'pendiente', $notas !== '' ? $notas : null, $itemId, $planId]);
+    $stmt->execute([
+        $faseId > 0 ? $faseId : null,
+        $cantidad,
+        $subtotal,
+        $estado !== '' ? $estado : 'pendiente',
+        $notas !== '' ? $notas : null,
+        $itemId,
+        $planId
+    ]);
+
     pmRecalcularPlanTotal($pdo, $planId);
-    pmSincronizarTratamientoRealizadoHistoria($pdo, $itemId, (int)($_SESSION['usuario_id'] ?? 0) ?: null);
+
+    try {
+        pmSincronizarTratamientoRealizadoHistoria($pdo, $itemId, $registradoPor);
+    } catch (Throwable $e) {
+        error_log('Error al sincronizar item actualizado del plan con historia clínica: ' . $e->getMessage());
+    }
+
     pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'ok' => 'item_editado']);
 }
 
 if ($action === 'eliminar_item') {
     $itemId = (int)($_POST['item_id'] ?? 0);
+
     if ($itemId <= 0) {
         pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'error' => 'item']);
     }
 
-    pmEliminarTratamientoRealizadoHistoria($pdo, $itemId);
+    try {
+        pmEliminarTratamientoRealizadoHistoria($pdo, $itemId);
+    } catch (Throwable $e) {
+        error_log('Error al eliminar sincronización de historia clínica al borrar item del plan: ' . $e->getMessage());
+    }
+
     $stmt = $pdo->prepare('DELETE FROM plan_tratamiento_items WHERE id = ? AND plan_id = ?');
     $stmt->execute([$itemId, $planId]);
+
     pmRecalcularPlanTotal($pdo, $planId);
+
     pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'ok' => 'item_eliminado']);
 }
 
@@ -242,7 +309,15 @@ if ($action === 'actualizar_plan') {
     }
 
     $stmt = $pdo->prepare('UPDATE planes_tratamiento SET titulo = ?, diagnostico = ?, objetivo = ?, estado = ? WHERE id = ? AND paciente_id = ?');
-    $stmt->execute([$titulo, $diagnostico !== '' ? $diagnostico : null, $objetivo !== '' ? $objetivo : null, $estado !== '' ? $estado : 'propuesto', $planId, $pacienteId]);
+    $stmt->execute([
+        $titulo,
+        $diagnostico !== '' ? $diagnostico : null,
+        $objetivo !== '' ? $objetivo : null,
+        $estado !== '' ? $estado : 'propuesto',
+        $planId,
+        $pacienteId
+    ]);
+
     pmRedirectPlan($returnTo, $pacienteId, ['plan_id' => $planId, 'ok' => 'plan_editado']);
 }
 
